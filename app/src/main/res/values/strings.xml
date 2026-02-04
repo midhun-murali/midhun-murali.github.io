@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Filterify</string>
-    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
-    <string name="admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="admob_app_id">ca-app-pub-2971816084619981~8115258035</string>
+    <string name="admob_banner_id">ca-app-pub-2971816084619981/7329516321</string>
     <string name="photo_saved">Photo saved to %1$s</string>
     <string name="take_photo_error">Unable to capture photo</string>
     <string name="permission_denied">Camera permission is required to use the app</string>
