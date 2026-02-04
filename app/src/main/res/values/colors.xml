@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Pink theme colors -->
+    <color name="pink_light">#FFFDF4F8</color>
+    <color name="pink_medium">#FFF7DDEB</color>
+    <color name="pink_dark">#FFEBC1D9</color>
+    <color name="pink_accent">#FFD875B6</color>
+    <color name="pink_selected">#FFD25DA2</color>
+    <color name="grey_light">#FFF1EFF2</color>
+    <color name="grey_medium">#FFB3AABB</color>
+    <color name="grey_dark">#FF7A6D86</color>
+
+    <!-- Extras for panels and icons -->
+    <color name="pink_shell">#FFFDF8FB</color>
+    <color name="pink_panel">#FFFBEFF5</color>
+    <color name="pink_border">#FFEED4E5</color>
+    <color name="pink_icon">#FFD25DA2</color>
+    <color name="shadow_soft">#1A000000</color>
+</resources>

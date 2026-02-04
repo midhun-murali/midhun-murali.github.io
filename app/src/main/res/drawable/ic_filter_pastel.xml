@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Gradient-like layered circles to represent pastel -->
+    <path
+        android:fillColor="#FFF7F0"
+        android:pathData="M24,6a18,18 0 1,0 0,36a18,18 0 1,0 0,-36z" />
+    <path
+        android:fillColor="#FFD9E6"
+        android:pathData="M24,12a12,12 0 1,0 0,24a12,12 0 1,0 0,-24z" />
+    <path
+        android:fillColor="#FFB3C7"
+        android:pathData="M24,18a6,6 0 1,0 0,12a6,6 0 1,0 0,-12z" />
+</vector>

@@ -1,0 +1,21 @@
+<resources>
+    <!-- Base application theme. -->
+    <style name="Theme.Filterify" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/pink_accent</item>
+        <item name="colorPrimaryVariant">@color/pink_selected</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/pink_medium</item>
+        <item name="colorSecondaryVariant">@color/pink_dark</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <!-- Status/navigation bar color. -->
+        <item name="android:statusBarColor">@color/pink_shell</item>
+        <item name="android:navigationBarColor">@color/pink_shell</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <!-- Make sure window action bar is disabled and there's no title -->
+        <item name="windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <!-- Customize your theme here. -->
+    </style>
+</resources>

@@ -1,0 +1,252 @@
+package com.soopersaiyan.filterify
+
+import android.app.AlertDialog
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
+import android.net.Uri
+import android.os.Bundle
+import android.view.View
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsCompat.Type
+import java.io.File
+import java.io.FileOutputStream
+
+class PhotoEditActivity : AppCompatActivity() {
+
+    companion object {
+        const val EXTRA_IMAGE_URI = "extra_image_uri"
+    }
+
+    // reuse main layout ids: previewView is an ImageView in editor layout
+    private lateinit var imageView: ImageView
+    private lateinit var filterCarousel: RecyclerView
+    private lateinit var btnSave: ImageButton
+    private lateinit var btnClose: ImageButton
+    private lateinit var galleryImageOverlay: ImageView
+    private var originalBitmap: Bitmap? = null
+    private var workingBitmap: Bitmap? = null
+    private var currentFilter: MainActivity.Filter = MainActivity.Filter.ORIGINAL
+    private var brightnessValue = 0f // -100 .. +100
+    private var isEffectsMode = true
+    private lateinit var effectsButtonEdit: LinearLayout
+    private lateinit var retouchButtonEdit: LinearLayout
+    private lateinit var effectsTextEdit: TextView
+    private lateinit var retouchTextEdit: TextView
+    private var modeContainerOriginalPaddingTop = 0
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        supportActionBar?.hide()
+        setContentView(R.layout.activity_photo_edit)
+
+        imageView = findViewById(R.id.previewView)
+        filterCarousel = findViewById(R.id.filterCarousel)
+        btnSave = findViewById(R.id.captureButton)
+        btnClose = findViewById(R.id.closeGalleryButton)
+        galleryImageOverlay = findViewById(R.id.galleryImageOverlay)
+        // reuse main UI ids so layout mirrors MainActivity
+        effectsButtonEdit = findViewById(R.id.effectsButton)
+        retouchButtonEdit = findViewById(R.id.retouchButton)
+        effectsTextEdit = findViewById(R.id.effectsText)
+        retouchTextEdit = findViewById(R.id.retouchText)
+
+        val uriString = intent?.getStringExtra(EXTRA_IMAGE_URI)
+        if (uriString == null) {
+            finish()
+            return
+        }
+
+        val bitmap = loadBitmap(uriString)
+        if (bitmap == null) {
+            Toast.makeText(this, R.string.error_loading_image, Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        originalBitmap = bitmap
+        workingBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        imageView.setImageBitmap(workingBitmap)
+
+        setupFilters()
+
+        // Apply status bar inset to the top mode buttons container so it's below system status bar
+        val modeContainer = findViewById<View>(R.id.modeButtonsContainer)
+        modeContainerOriginalPaddingTop = modeContainer.paddingTop
+        ViewCompat.setOnApplyWindowInsetsListener(modeContainer) { v, insets ->
+            val statusInset = insets.getInsets(Type.statusBars()).top
+            v.setPadding(v.paddingLeft, modeContainerOriginalPaddingTop + statusInset, v.paddingRight, v.paddingBottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(modeContainer)
+
+        // Initialize mode buttons behavior
+        updateModeButtonsUI()
+        effectsButtonEdit.setOnClickListener {
+            isEffectsMode = true
+            updateModeButtonsUI()
+        }
+        retouchButtonEdit.setOnClickListener {
+            isEffectsMode = false
+            updateModeButtonsUI()
+            // open the retouch dialog immediately when user taps Retouch
+            showRetouchDialog()
+        }
+
+        btnSave.setOnClickListener { saveEditedImage() }
+        btnClose.setOnClickListener { hideGalleryOverlay(); finish() }
+    }
+
+    private fun setupFilters() {
+        val filters = listOf(
+            MainActivity.Filter.ORIGINAL,
+            MainActivity.Filter.SWEET,
+            MainActivity.Filter.PASTEL,
+            MainActivity.Filter.BLOOM,
+            MainActivity.Filter.VINTAGS,
+            MainActivity.Filter.MONO
+        )
+        filterCarousel.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        val adapter = FilterAdapter(filters) { filter ->
+            currentFilter = filter
+            applyCurrentFilter()
+        }
+        filterCarousel.adapter = adapter
+    }
+
+    private fun applyCurrentFilter() {
+        val orig = originalBitmap ?: return
+        // Create a new bitmap applying color matrix + brightness
+        val result = Bitmap.createBitmap(orig.width, orig.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        val matrix = currentFilter.matrix()
+        if (brightnessValue != 0f) {
+            val translate = ColorMatrix().apply {
+                set(floatArrayOf(
+                    1f, 0f, 0f, 0f, brightnessValue,
+                    0f, 1f, 0f, 0f, brightnessValue,
+                    0f, 0f, 1f, 0f, brightnessValue,
+                    0f, 0f, 0f, 1f, 0f
+                ))
+            }
+            matrix.postConcat(translate)
+        }
+        val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(matrix); isFilterBitmap = true }
+        canvas.drawBitmap(orig, 0f, 0f, paint)
+        workingBitmap?.recycle()
+        workingBitmap = result
+        imageView.setImageBitmap(workingBitmap)
+    }
+
+    private fun showRetouchDialog() {
+        val seekBar = SeekBar(this).apply {
+            max = 200
+            progress = (brightnessValue + 100f).toInt()
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.retouch)
+            .setView(seekBar)
+            .setPositiveButton(R.string.save) { _, _ ->
+                // save brightnessValue and apply
+                brightnessValue = (seekBar.progress - 100).toFloat()
+                applyCurrentFilter()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                brightnessValue = (progress - 100).toFloat()
+                applyCurrentFilter()
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+        dialog.show()
+    }
+
+    private fun saveEditedImage() {
+        val bmp = workingBitmap ?: return
+        val outDir = getOutputDirectory()
+        val outFile = File(outDir, "edited_${System.currentTimeMillis()}.jpg")
+        try {
+            FileOutputStream(outFile).use { bmp.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+            // Open PhotoPreviewActivity with saved file path
+            val intent = Intent(this, PhotoPreviewActivity::class.java).apply {
+                putExtra(PhotoPreviewActivity.EXTRA_IMAGE_URI, outFile.absolutePath)
+            }
+            startActivity(intent)
+            finish()
+        } catch (e: Exception) {
+            Toast.makeText(this, R.string.save_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun loadBitmap(uriString: String): Bitmap? {
+        return try {
+            if (uriString.startsWith("content://") || uriString.startsWith("file://")) {
+                val uri = Uri.parse(uriString)
+                contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+            } else {
+                // assume absolute file path
+                BitmapFactory.decodeFile(uriString)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun getOutputDirectory(): File {
+        val mediaDir = externalMediaDirs.firstOrNull()?.let {
+            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
+        }
+        return if (mediaDir != null && mediaDir.exists()) mediaDir else filesDir
+    }
+
+    private fun updateModeButtonsUI() {
+        if (isEffectsMode) {
+            effectsButtonEdit.background = AppCompatResources.getDrawable(this, R.drawable.button_effects_background)
+            effectsTextEdit.setTextColor(getColor(R.color.pink_selected))
+            effectsTextEdit.textSize = 14f
+            effectsTextEdit.typeface = android.graphics.Typeface.create(effectsTextEdit.typeface, android.graphics.Typeface.BOLD)
+
+            retouchButtonEdit.background = AppCompatResources.getDrawable(this, R.drawable.button_retouch_background)
+            retouchTextEdit.setTextColor(getColor(R.color.grey_dark))
+            retouchTextEdit.textSize = 14f
+            retouchTextEdit.typeface = android.graphics.Typeface.create(retouchTextEdit.typeface, android.graphics.Typeface.NORMAL)
+        } else {
+            retouchButtonEdit.background = AppCompatResources.getDrawable(this, R.drawable.button_effects_background)
+            retouchTextEdit.setTextColor(getColor(R.color.pink_selected))
+            retouchTextEdit.textSize = 14f
+            retouchTextEdit.typeface = android.graphics.Typeface.create(retouchTextEdit.typeface, android.graphics.Typeface.BOLD)
+
+            effectsButtonEdit.background = AppCompatResources.getDrawable(this, R.drawable.button_retouch_background)
+            effectsTextEdit.setTextColor(getColor(R.color.grey_dark))
+            effectsTextEdit.textSize = 14f
+            effectsTextEdit.typeface = android.graphics.Typeface.create(effectsTextEdit.typeface, android.graphics.Typeface.NORMAL)
+        }
+    }
+
+    private fun hideGalleryOverlay() {
+        try {
+            galleryImageOverlay.visibility = View.GONE
+            galleryImageOverlay.setImageDrawable(null)
+        } catch (_: Exception) {
+            // ignore
+        }
+    }
+}
