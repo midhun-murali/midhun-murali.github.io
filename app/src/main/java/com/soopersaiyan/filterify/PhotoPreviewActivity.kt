@@ -12,14 +12,13 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsCompat.Type
+import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
-import androidx.exifinterface.media.ExifInterface
 
 class PhotoPreviewActivity : AppCompatActivity() {
 
@@ -27,7 +26,6 @@ class PhotoPreviewActivity : AppCompatActivity() {
     private lateinit var btnDelete: ImageButton
     private lateinit var btnSave: ImageButton
     private lateinit var btnShare: ImageButton
-    private lateinit var progress: ProgressBar
 
     private var imageUri: Uri? = null
     private var imageFile: File? = null
@@ -42,35 +40,28 @@ class PhotoPreviewActivity : AppCompatActivity() {
         btnDelete = findViewById(R.id.btnDelete)
         btnSave = findViewById(R.id.btnSave)
         btnShare = findViewById(R.id.btnShare)
-        progress = findViewById(R.id.progress)
 
-        // Back button at top-left
-        val btnBack = findViewById<ImageButton?>(R.id.btnBackPreview)
-        btnBack?.setOnClickListener { finish() }
+        // Back button reference
+        val btnBack = findViewById<ImageButton>(R.id.btnBack)
+        btnBack.setOnClickListener { finish() }
+        btnBack.visibility = View.VISIBLE
+        btnBack.elevation = 12f
+        // Force tint if available
+        try { btnBack.imageTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.white)) } catch (_: Exception) {}
 
-        // Apply status bar inset to back button to keep it below status bar
-        btnBack?.let { btn ->
-            val origTop = btn.paddingTop
-            ViewCompat.setOnApplyWindowInsetsListener(btn) { v, insets ->
-                val statusInset = insets.getInsets(Type.statusBars()).top
-                v.setPadding(v.paddingLeft, origTop + statusInset, v.paddingRight, v.paddingBottom)
-                insets
-            }
-            ViewCompat.requestApplyInsets(btn)
-            // ensure the back button is drawn above the preview
-            btn.bringToFront()
-        }
-
-        // Apply status bar inset to the preview image so it doesn't sit under the status bar
-        previewOriginalPaddingTop = imageView.paddingTop
-        ViewCompat.setOnApplyWindowInsetsListener(imageView) { v, insets ->
+        // Apply status bar inset to root so all children (including back button) shift down under the status bar
+        val root = findViewById<View>(R.id.previewRoot)
+        val rootOrigTop = root.paddingTop
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
             val statusInset = insets.getInsets(Type.statusBars()).top
-            v.setPadding(v.paddingLeft, previewOriginalPaddingTop + statusInset, v.paddingRight, v.paddingBottom)
+            v.setPadding(v.paddingLeft, rootOrigTop + statusInset, v.paddingRight, v.paddingBottom)
             insets
         }
-        ViewCompat.requestApplyInsets(imageView)
+        ViewCompat.requestApplyInsets(root)
+        // ensure the back button is above the preview
+        btnBack.bringToFront()
 
-        imageUri = intent?.getStringExtra(EXTRA_IMAGE_URI)?.let { Uri.parse(it) }
+        imageUri = intent?.getStringExtra(EXTRA_IMAGE_URI)?.let { it.toUri() }
         if (imageUri == null) {
             finish()
             return
@@ -84,7 +75,6 @@ class PhotoPreviewActivity : AppCompatActivity() {
     }
 
     private fun loadImage() {
-        progress.visibility = View.VISIBLE
         try {
             val uri = imageUri ?: return
             val fileFromUri = uri.path?.let { File(it) }
@@ -125,8 +115,6 @@ class PhotoPreviewActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, R.string.error_loading_image, Toast.LENGTH_SHORT).show()
             finish()
-        } finally {
-            progress.visibility = View.GONE
         }
     }
 
@@ -169,7 +157,7 @@ class PhotoPreviewActivity : AppCompatActivity() {
                 Toast.makeText(this, R.string.deleted, Toast.LENGTH_SHORT).show()
                 finish()
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(this, R.string.delete_failed, Toast.LENGTH_SHORT).show()
         }
     }
@@ -181,7 +169,7 @@ class PhotoPreviewActivity : AppCompatActivity() {
             val outFile = File(getExternalFilesDir(null), "saved_${System.currentTimeMillis()}.jpg")
             FileOutputStream(outFile).use { input.copyTo(it) }
             Toast.makeText(this, getString(R.string.photo_saved, outFile.absolutePath), Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(this, R.string.save_failed, Toast.LENGTH_SHORT).show()
         }
     }
@@ -195,7 +183,7 @@ class PhotoPreviewActivity : AppCompatActivity() {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             startActivity(Intent.createChooser(shareIntent, getString(R.string.share)))
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(this, R.string.share_failed, Toast.LENGTH_SHORT).show()
         }
     }
