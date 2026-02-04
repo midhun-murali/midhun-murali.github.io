@@ -9,6 +9,10 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.net.Uri
+import android.graphics.Matrix
+import androidx.exifinterface.media.ExifInterface
+import androidx.core.graphics.createBitmap
+import androidx.core.net.toUri
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageButton
@@ -22,10 +26,10 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsCompat.Type
 import java.io.File
 import java.io.FileOutputStream
+import java.io.ByteArrayInputStream
 
 class PhotoEditActivity : AppCompatActivity() {
 
@@ -65,6 +69,9 @@ class PhotoEditActivity : AppCompatActivity() {
         retouchButtonEdit = findViewById(R.id.retouchButton)
         effectsTextEdit = findViewById(R.id.effectsText)
         retouchTextEdit = findViewById(R.id.retouchText)
+        // Back button in the top-left of the editor
+        val btnBack = findViewById<ImageButton?>(R.id.btnBackEdit)
+        btnBack?.setOnClickListener { finish() }
 
         val uriString = intent?.getStringExtra(EXTRA_IMAGE_URI)
         if (uriString == null) {
@@ -131,7 +138,7 @@ class PhotoEditActivity : AppCompatActivity() {
     private fun applyCurrentFilter() {
         val orig = originalBitmap ?: return
         // Create a new bitmap applying color matrix + brightness
-        val result = Bitmap.createBitmap(orig.width, orig.height, Bitmap.Config.ARGB_8888)
+        val result = createBitmap(orig.width, orig.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(result)
         val matrix = currentFilter.matrix()
         if (brightnessValue != 0f) {
@@ -186,27 +193,72 @@ class PhotoEditActivity : AppCompatActivity() {
         try {
             FileOutputStream(outFile).use { bmp.compress(Bitmap.CompressFormat.JPEG, 95, it) }
             // Open PhotoPreviewActivity with saved file path
+            val fileUriString = Uri.fromFile(outFile).toString()
             val intent = Intent(this, PhotoPreviewActivity::class.java).apply {
-                putExtra(PhotoPreviewActivity.EXTRA_IMAGE_URI, outFile.absolutePath)
+                putExtra(PhotoPreviewActivity.EXTRA_IMAGE_URI, fileUriString)
             }
             startActivity(intent)
             finish()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(this, R.string.save_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun loadBitmap(uriString: String): Bitmap? {
         return try {
-            if (uriString.startsWith("content://") || uriString.startsWith("file://")) {
-                val uri = Uri.parse(uriString)
-                contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
-            } else {
-                // assume absolute file path
-                BitmapFactory.decodeFile(uriString)
+            when {
+                uriString.startsWith("content://") -> {
+                    val uri = uriString.toUri()
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        val bytes = input.readBytes()
+                        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        val exif = ExifInterface(ByteArrayInputStream(bytes))
+                        return rotateBitmapByExif(bmp, exif)
+                    }
+                }
+                uriString.startsWith("file://") -> {
+                    val uri = Uri.parse(uriString)
+                    val path = uri.path ?: return null
+                    val bmp = BitmapFactory.decodeFile(path)
+                    val exif = ExifInterface(path)
+                    return rotateBitmapByExif(bmp, exif)
+                }
+                else -> {
+                    // assume absolute file path
+                    val bmp = BitmapFactory.decodeFile(uriString)
+                    val exif = try { ExifInterface(uriString) } catch (_: Exception) { null }
+                    return if (exif != null) rotateBitmapByExif(bmp, exif) else bmp
+                }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
+        }
+    }
+
+    private fun rotateBitmapByExif(bitmap: Bitmap?, exif: ExifInterface?): Bitmap? {
+        if (bitmap == null || exif == null) return bitmap
+        val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
+            ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
+            else -> { /* normal */ }
+        }
+        return try {
+            if (matrix.isIdentity) {
+                bitmap
+            } else {
+                val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                bitmap.recycle()
+                rotated
+            }
+        } catch (_: Exception) {
+            bitmap
         }
     }
 

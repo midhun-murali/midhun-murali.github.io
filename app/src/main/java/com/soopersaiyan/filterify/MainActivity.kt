@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
@@ -37,12 +38,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsCompat.Type
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.camera.core.Camera
 import android.content.res.ColorStateList
+import android.media.ExifInterface
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.MobileAds
@@ -58,8 +60,6 @@ class MainActivity : AppCompatActivity() {
 
     // store original top padding to avoid applying status bar inset multiple times
     private var topBarOriginalPaddingTop = 0
-    // store original bottom padding to avoid applying navigation bar inset multiple times
-    private var bottomBarOriginalPaddingBottom = 0
 
     private lateinit var previewView: PreviewView
     private lateinit var topBarLayout: View
@@ -131,13 +131,6 @@ class MainActivity : AppCompatActivity() {
         ViewCompat.requestApplyInsets(topBarLayout)
         // Apply navigation bar inset for bottomBar so it sits above gesture nav / home indicator
         bottomBarLayout = findViewById(R.id.bottomBar)
-        bottomBarOriginalPaddingBottom = bottomBarLayout.paddingBottom
-        ViewCompat.setOnApplyWindowInsetsListener(bottomBarLayout) { v, insets ->
-            val navInset = insets.getInsets(Type.navigationBars()).bottom
-            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, bottomBarOriginalPaddingBottom + navInset)
-            insets
-        }
-        ViewCompat.requestApplyInsets(bottomBarLayout)
         // Use TextureView-backed implementation so view effects (filters) apply reliably
         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
         previewView.scaleType = PreviewView.ScaleType.FILL_CENTER
@@ -209,7 +202,7 @@ class MainActivity : AppCompatActivity() {
         val adapter = FilterAdapter(filters) { filter ->
             currentFilter = filter
             // If a gallery image is shown apply filter to it, otherwise to the preview
-            if (galleryImageOverlay.visibility == View.VISIBLE) {
+            if (galleryImageOverlay.isVisible) {
                 applyFilterToGalleryOverlay()
             } else {
                 applyFilterToPreview()
@@ -243,11 +236,11 @@ class MainActivity : AppCompatActivity() {
 
             // Enable torch only for FLASH_MODE_ON (continuous light for preview)
             val cam = camera
-            val hasFlash = try { cam?.cameraInfo?.hasFlashUnit() ?: false } catch (e: Exception) { false }
+            val hasFlash = try { cam?.cameraInfo?.hasFlashUnit() ?: false } catch (_: Exception) { false }
             if (flashMode == ImageCapture.FLASH_MODE_ON && hasFlash) {
-                try { cam?.cameraControl?.enableTorch(true); isTorchOn = true } catch (e: Exception) { /* ignore */ }
+                try { cam?.cameraControl?.enableTorch(true); isTorchOn = true } catch (_: Exception) { /* ignore */ }
             } else {
-                try { cam?.cameraControl?.enableTorch(false); isTorchOn = false } catch (e: Exception) { /* ignore */ }
+                try { cam?.cameraControl?.enableTorch(false); isTorchOn = false } catch (_: Exception) { /* ignore */ }
             }
             updateFlashButton()
         }
@@ -287,7 +280,7 @@ class MainActivity : AppCompatActivity() {
             updateHdrUI()
             // Apply a simulated HDR preview by adjusting color matrix slightly
             applyFilterToPreview()
-            if (galleryImageOverlay.visibility == View.VISIBLE) applyFilterToGalleryOverlay()
+            if (galleryImageOverlay.isVisible) applyFilterToGalleryOverlay()
         }
 
         timerButton.setOnClickListener {
@@ -518,12 +511,17 @@ class MainActivity : AppCompatActivity() {
                         original.recycle()
                         filtered.recycle()
                         MediaScannerConnection.scanFile(this@MainActivity, arrayOf(photoFile.absolutePath), null, null)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error post-processing saved image", e)
+                    } catch (_: Exception) {
+                        Log.e(TAG, "Error post-processing saved image", null)
                     }
                 }
 
-                // Launch the PhotoEditActivity so the user can tweak filters/retouch
+                // Normalize orientation for the saved file so editor/preview show upright image
+                try {
+                    normalizeJpegOrientation(photoFile)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to normalize orientation", e)
+                }
                 runOnUiThread {
                     try {
                         val intent = Intent(this@MainActivity, PhotoEditActivity::class.java).apply {
@@ -566,6 +564,42 @@ class MainActivity : AppCompatActivity() {
         }
         Canvas(result).drawBitmap(source, 0f, 0f, paint)
         return result
+    }
+
+    // Normalize JPEG orientation: rotate pixel data according to EXIF then set orientation tag to NORMAL
+    private fun normalizeJpegOrientation(file: File) {
+        try {
+            val exif = try {
+                ExifInterface(file.absolutePath)
+            } catch (_: Exception) { null }
+            val orientation = exif?.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+                ?: ExifInterface.ORIENTATION_NORMAL
+            if (orientation == ExifInterface.ORIENTATION_NORMAL) return
+
+            val bmp = BitmapFactory.decodeFile(file.absolutePath) ?: return
+            val matrix = Matrix()
+            when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+                ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+                ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+                ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+                ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
+                ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
+                else -> { /* normal */ }
+            }
+            val rotated = try { if (matrix.isIdentity) bmp else Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true) } catch (_: Exception) { bmp }
+            FileOutputStream(file).use { rotated.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+            try {
+                val newExif = ExifInterface(file.absolutePath)
+                newExif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+                newExif.saveAttributes()
+            } catch (_: Exception) { /* ignore */ }
+            if (rotated !== bmp && !bmp.isRecycled) bmp.recycle()
+            if (!rotated.isRecycled) rotated.recycle()
+        } catch (e: Exception) {
+            Log.w(TAG, "normalizeJpegOrientation failed", e)
+        }
     }
 
     private fun loadBitmapFromUri(uri: Uri): Bitmap? {

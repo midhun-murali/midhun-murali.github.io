@@ -3,6 +3,7 @@ package com.soopersaiyan.filterify
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
@@ -15,8 +16,10 @@ import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsCompat.Type
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
+import androidx.exifinterface.media.ExifInterface
 
 class PhotoPreviewActivity : AppCompatActivity() {
 
@@ -40,6 +43,23 @@ class PhotoPreviewActivity : AppCompatActivity() {
         btnSave = findViewById(R.id.btnSave)
         btnShare = findViewById(R.id.btnShare)
         progress = findViewById(R.id.progress)
+
+        // Back button at top-left
+        val btnBack = findViewById<ImageButton?>(R.id.btnBackPreview)
+        btnBack?.setOnClickListener { finish() }
+
+        // Apply status bar inset to back button to keep it below status bar
+        btnBack?.let { btn ->
+            val origTop = btn.paddingTop
+            ViewCompat.setOnApplyWindowInsetsListener(btn) { v, insets ->
+                val statusInset = insets.getInsets(Type.statusBars()).top
+                v.setPadding(v.paddingLeft, origTop + statusInset, v.paddingRight, v.paddingBottom)
+                insets
+            }
+            ViewCompat.requestApplyInsets(btn)
+            // ensure the back button is drawn above the preview
+            btn.bringToFront()
+        }
 
         // Apply status bar inset to the preview image so it doesn't sit under the status bar
         previewOriginalPaddingTop = imageView.paddingTop
@@ -67,10 +87,35 @@ class PhotoPreviewActivity : AppCompatActivity() {
         progress.visibility = View.VISIBLE
         try {
             val uri = imageUri ?: return
-            // Try to resolve to a file if possible
-            imageFile = uri.path?.let { File(it) }
-            val input = contentResolver.openInputStream(uri)
-            val bitmap = input?.use { BitmapFactory.decodeStream(it) }
+            val fileFromUri = uri.path?.let { File(it) }
+            var bitmap: Bitmap? = null
+            if (uri.scheme == "file" && fileFromUri != null && fileFromUri.exists()) {
+                imageFile = fileFromUri
+                val bmp = BitmapFactory.decodeFile(fileFromUri.absolutePath)
+                val exif = try { ExifInterface(fileFromUri.absolutePath) } catch (_: Exception) { null }
+                bitmap = rotateBitmapByExif(bmp, exif)
+            } else if (uri.scheme == "content") {
+                val inputBytes = try { contentResolver.openInputStream(uri)?.use { it.readBytes() } } catch (_: Exception) { null }
+                if (inputBytes != null) {
+                    val bmp = BitmapFactory.decodeByteArray(inputBytes, 0, inputBytes.size)
+                    val exif = try { ExifInterface(ByteArrayInputStream(inputBytes)) } catch (_: Exception) { null }
+                    bitmap = rotateBitmapByExif(bmp, exif)
+                }
+                // fallback: if content couldn't be decoded but fileFromUri exists
+                if (bitmap == null && fileFromUri != null && fileFromUri.exists()) {
+                    imageFile = fileFromUri
+                    val bmp = BitmapFactory.decodeFile(fileFromUri.absolutePath)
+                    val exif = try { ExifInterface(fileFromUri.absolutePath) } catch (_: Exception) { null }
+                    bitmap = rotateBitmapByExif(bmp, exif)
+                }
+            } else {
+                // assume absolute file path
+                val path = uri.path ?: return
+                val bmp = BitmapFactory.decodeFile(path)
+                val exif = try { ExifInterface(path) } catch (_: Exception) { null }
+                bitmap = rotateBitmapByExif(bmp, exif)
+            }
+
             if (bitmap != null) {
                 imageView.setImageBitmap(bitmap)
             } else {
@@ -82,6 +127,27 @@ class PhotoPreviewActivity : AppCompatActivity() {
             finish()
         } finally {
             progress.visibility = View.GONE
+        }
+    }
+
+    private fun rotateBitmapByExif(bitmap: Bitmap?, exif: ExifInterface?): Bitmap? {
+        if (bitmap == null || exif == null) return bitmap
+        val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
+            ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
+            else -> { /* normal */ }
+        }
+        return try {
+            if (matrix.isIdentity) bitmap else Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        } catch (_: Exception) {
+            bitmap
         }
     }
 

@@ -46,6 +46,8 @@ dependencies {
     implementation(libs.play.services.ads)
     implementation(libs.camera.core)
     implementation(libs.androidx.recyclerview)
+    // ExifInterface for reading/writing image orientation
+    implementation("androidx.exifinterface:exifinterface:1.3.6")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

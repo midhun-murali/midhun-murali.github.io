@@ -10,6 +10,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="fitCenter"
+        android:contentDescription="@string/preview_image"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/bottomBar"
         app:layout_constraintStart_toStartOf="parent"
@@ -24,6 +25,21 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Back button placed after preview so it is on top -->
+    <ImageButton
+        android:id="@+id/btnBackPreview"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_arrow_back"
+        android:background="@drawable/circle_back_bg"
+        android:contentDescription="@string/back"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="8dp"
+        android:tint="@color/white"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:elevation="8dp" />
 
     <LinearLayout
         android:id="@+id/bottomBar"
