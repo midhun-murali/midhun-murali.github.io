@@ -71,8 +71,6 @@ class MainActivity : AppCompatActivity() {
     private var settingsButton: ImageButton? = null
     private var flashButton: ImageButton? = null
     private var cameraSwitchButton: ImageButton? = null
-    private lateinit var effectsButton: LinearLayout
-    private lateinit var retouchButton: LinearLayout
     private lateinit var adView: AdView
 
     // New overlay views for gallery image
@@ -97,7 +95,6 @@ class MainActivity : AppCompatActivity() {
     private var isTorchOn = false
     private var lensFacing = CameraSelector.LENS_FACING_BACK
     private var flashMode = ImageCapture.FLASH_MODE_OFF
-    private var isEffectsMode = true
 
     // New states
     private var isHdrEnabled = false
@@ -141,8 +138,6 @@ class MainActivity : AppCompatActivity() {
         settingsButton = findViewById(R.id.settingsButton)
         flashButton = findViewById(R.id.flashButton)
         cameraSwitchButton = findViewById(R.id.cameraSwitchButton)
-        effectsButton = findViewById(R.id.effectsButton)
-        retouchButton = findViewById(R.id.retouchButton)
         adView = findViewById(R.id.adView)
 
         // New overlay views
@@ -188,7 +183,6 @@ class MainActivity : AppCompatActivity() {
 
         setupFilterCarousel()
         setupClickListeners()
-        updateModeButtons()
 
         if (allPermissionsGranted()) {
             startCamera()
@@ -254,18 +248,6 @@ class MainActivity : AppCompatActivity() {
             startCamera()
         }
 
-        effectsButton.setOnClickListener {
-            isEffectsMode = true
-            updateModeButtons()
-        }
-
-        retouchButton.setOnClickListener {
-            isEffectsMode = false
-            updateModeButtons()
-            // Retouch functionality can be added later
-            Toast.makeText(this, "Retouch mode coming soon", Toast.LENGTH_SHORT).show()
-        }
-
         settingsButton?.setOnClickListener {
             // Settings functionality can be added later
             Toast.makeText(this, "Settings coming soon", Toast.LENGTH_SHORT).show()
@@ -316,33 +298,6 @@ class MainActivity : AppCompatActivity() {
                 takePhoto()
             }
         }.start()
-    }
-
-    private fun updateModeButtons() {
-        val effectsText = effectsButton.findViewById<TextView>(R.id.effectsText)
-        val retouchText = retouchButton.findViewById<TextView>(R.id.retouchText)
-
-        if (isEffectsMode) {
-            effectsButton.background = AppCompatResources.getDrawable(this, R.drawable.button_effects_background)
-            effectsText.setTextColor(getColor(R.color.pink_selected))
-            effectsText.textSize = 14f
-            effectsText.typeface = android.graphics.Typeface.create(effectsText.typeface, android.graphics.Typeface.BOLD)
-
-            retouchButton.background = AppCompatResources.getDrawable(this, R.drawable.button_retouch_background)
-            retouchText.setTextColor(getColor(R.color.grey_dark))
-            retouchText.textSize = 14f
-            retouchText.typeface = android.graphics.Typeface.create(retouchText.typeface, android.graphics.Typeface.NORMAL)
-        } else {
-            retouchButton.background = AppCompatResources.getDrawable(this, R.drawable.button_effects_background)
-            retouchText.setTextColor(getColor(R.color.pink_selected))
-            retouchText.textSize = 14f
-            retouchText.typeface = android.graphics.Typeface.create(retouchText.typeface, android.graphics.Typeface.BOLD)
-
-            effectsButton.background = AppCompatResources.getDrawable(this, R.drawable.button_retouch_background)
-            effectsText.setTextColor(getColor(R.color.grey_dark))
-            effectsText.textSize = 14f
-            effectsText.typeface = android.graphics.Typeface.create(effectsText.typeface, android.graphics.Typeface.NORMAL)
-        }
     }
 
     private fun updateFlashButton() {
