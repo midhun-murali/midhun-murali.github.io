@@ -36,8 +36,15 @@ class FilterAdapter(
             Filter.SWEET -> R.drawable.ic_filter_sweet
             Filter.PASTEL -> R.drawable.ic_filter_pastel
             Filter.BLOOM -> R.drawable.ic_filter_bloom
-            Filter.VINTAGS -> R.drawable.ic_filter_vintags
+            Filter.VINTAGE -> R.drawable.ic_filter_vintage
             Filter.MONO -> R.drawable.ic_filter_mono
+            // use new thumb resources for new filters
+            Filter.SEPIA -> R.drawable.ic_filter_sepia
+            Filter.VIBRANT -> R.drawable.ic_filter_vibrant
+            Filter.CINEMATIC -> R.drawable.ic_filter_cinematic
+            Filter.COOL -> R.drawable.ic_filter_cool
+            Filter.WARM -> R.drawable.ic_filter_warm
+            Filter.FADE -> R.drawable.ic_filter_fade
             else -> R.drawable.ic_filter_sweet
         }
         holder.filterThumbnail.setImageDrawable(ContextCompat.getDrawable(holder.itemView.context, thumbRes))

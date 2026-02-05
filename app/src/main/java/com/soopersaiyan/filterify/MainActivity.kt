@@ -27,7 +27,6 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.content.res.AppCompatResources
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -106,8 +105,15 @@ class MainActivity : AppCompatActivity() {
         Filter.SWEET,
         Filter.PASTEL,
         Filter.BLOOM,
-        Filter.VINTAGS,
-        Filter.MONO
+        Filter.VINTAGE,
+        Filter.MONO,
+        // new commonly used filters
+        Filter.SEPIA,
+        Filter.VIBRANT,
+        Filter.CINEMATIC,
+        Filter.COOL,
+        Filter.WARM,
+        Filter.FADE
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {

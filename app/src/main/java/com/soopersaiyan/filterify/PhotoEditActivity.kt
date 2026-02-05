@@ -124,8 +124,15 @@ class PhotoEditActivity : AppCompatActivity() {
             Filter.SWEET,
             Filter.PASTEL,
             Filter.BLOOM,
-            Filter.VINTAGS,
-            Filter.MONO
+            Filter.VINTAGE,
+            Filter.MONO,
+            // new commonly used filters
+            Filter.SEPIA,
+            Filter.VIBRANT,
+            Filter.CINEMATIC,
+            Filter.COOL,
+            Filter.WARM,
+            Filter.FADE
         )
         filterCarousel.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         val adapter = FilterAdapter(filters) { filter ->
