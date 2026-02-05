@@ -184,7 +184,7 @@ class PhotoEditActivity : AppCompatActivity() {
                 showSaturationDialog()
             }
             RetouchOption.BRIGHTNESS -> {
-                showRetouchDialog()
+                showBrightnessDialog()
             }
         }
     }
@@ -213,13 +213,13 @@ class PhotoEditActivity : AppCompatActivity() {
         imageView.setImageBitmap(workingBitmap)
     }
 
-    private fun showRetouchDialog() {
+    private fun showBrightnessDialog() {
         val seekBar = SeekBar(this).apply {
             max = 200
             progress = (brightnessValue + 100f).toInt()
         }
         val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.retouch)
+            .setTitle(R.string.retouch_brightness)
             .setView(seekBar)
             .setPositiveButton(R.string.save) { _, _ ->
                 // save brightnessValue and apply
