@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- circular photo-style background -->
+    <path
+        android:fillColor="#FFB74D"
+        android:pathData="M48,4 A44,44 0 1,0 48.0001,4 Z" />
+
+    <!-- crop corner icon (white) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M22,30 L22,22 L34,22 L34,26 L26,26 L26,34 L22,34 Z M74,66 L74,74 L62,74 L62,70 L70,70 L70,62 L74,62 Z M22,66 L22,74 L34,74 L34,70 L26,70 L26,62 L22,62 Z M74,30 L74,22 L62,22 L62,26 L70,26 L70,34 L74,34 Z" />
+</vector>
