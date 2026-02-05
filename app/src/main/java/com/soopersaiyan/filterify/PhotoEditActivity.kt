@@ -45,7 +45,7 @@ class PhotoEditActivity : AppCompatActivity() {
     private lateinit var galleryImageOverlay: ImageView
     private var originalBitmap: Bitmap? = null
     private var workingBitmap: Bitmap? = null
-    private var currentFilter: MainActivity.Filter = MainActivity.Filter.ORIGINAL
+    private var currentFilter: Filter = Filter.ORIGINAL
     private var brightnessValue = 0f // -100 .. +100
     private var isEffectsMode = true
     private lateinit var effectsButtonEdit: LinearLayout
@@ -120,12 +120,12 @@ class PhotoEditActivity : AppCompatActivity() {
 
     private fun setupFilters() {
         val filters = listOf(
-            MainActivity.Filter.ORIGINAL,
-            MainActivity.Filter.SWEET,
-            MainActivity.Filter.PASTEL,
-            MainActivity.Filter.BLOOM,
-            MainActivity.Filter.VINTAGS,
-            MainActivity.Filter.MONO
+            Filter.ORIGINAL,
+            Filter.SWEET,
+            Filter.PASTEL,
+            Filter.BLOOM,
+            Filter.VINTAGS,
+            Filter.MONO
         )
         filterCarousel.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         val adapter = FilterAdapter(filters) { filter ->

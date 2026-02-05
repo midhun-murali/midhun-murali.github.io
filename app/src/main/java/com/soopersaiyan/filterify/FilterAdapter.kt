@@ -9,8 +9,8 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
 class FilterAdapter(
-    private val filters: List<MainActivity.Filter>,
-    private val onFilterSelected: (MainActivity.Filter) -> Unit
+    private val filters: List<Filter>,
+    private val onFilterSelected: (Filter) -> Unit
 ) : RecyclerView.Adapter<FilterAdapter.FilterViewHolder>() {
 
     private var selectedPosition = 0
@@ -33,11 +33,11 @@ class FilterAdapter(
 
         // Map filter enum to drawable thumbnails (simple vector indicators)
         val thumbRes = when (filter) {
-            MainActivity.Filter.SWEET -> R.drawable.ic_filter_sweet
-            MainActivity.Filter.PASTEL -> R.drawable.ic_filter_pastel
-            MainActivity.Filter.BLOOM -> R.drawable.ic_filter_bloom
-            MainActivity.Filter.VINTAGS -> R.drawable.ic_filter_vintags
-            MainActivity.Filter.MONO -> R.drawable.ic_filter_mono
+            Filter.SWEET -> R.drawable.ic_filter_sweet
+            Filter.PASTEL -> R.drawable.ic_filter_pastel
+            Filter.BLOOM -> R.drawable.ic_filter_bloom
+            Filter.VINTAGS -> R.drawable.ic_filter_vintags
+            Filter.MONO -> R.drawable.ic_filter_mono
             else -> R.drawable.ic_filter_sweet
         }
         holder.filterThumbnail.setImageDrawable(ContextCompat.getDrawable(holder.itemView.context, thumbRes))
