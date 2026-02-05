@@ -44,7 +44,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.camera.core.Camera
 import android.content.res.ColorStateList
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.MobileAds
@@ -455,21 +455,32 @@ class MainActivity : AppCompatActivity() {
                 if (isHdrEnabled || currentFilter != Filter.ORIGINAL) {
                     // apply filter on a background thread then save
                     try {
+                        // Read EXIF from the file first so we can orient pixels correctly
+                        val exif = try { ExifInterface(photoFile.absolutePath) } catch (_: Exception) { null }
                         val original = BitmapFactory.decodeFile(photoFile.absolutePath) ?: run {
                             runOnUiThread {
                                 Toast.makeText(this@MainActivity, R.string.take_photo_error, Toast.LENGTH_SHORT).show()
                             }
                             return
                         }
-                        val filtered = createFilteredBitmapForSave(original)
+                        // Rotate the decoded bitmap according to EXIF so the filtered result keeps correct orientation
+                        val oriented = rotateBitmapByExif(original, exif)
+                        val filtered = createFilteredBitmapForSave(oriented ?: original)
                         FileOutputStream(photoFile).use { filtered.compress(Bitmap.CompressFormat.JPEG, 95, it) }
-                        original.recycle()
-                        filtered.recycle()
+                        // recycle bitmaps
+                        if (oriented !== original && !original.isRecycled) original.recycle()
+                        if (!filtered.isRecycled) filtered.recycle()
+                        // Ensure saved file has NORMAL orientation tag since we've applied rotation in-memory
+                        try {
+                            val newExif = ExifInterface(photoFile.absolutePath)
+                            newExif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+                            newExif.saveAttributes()
+                        } catch (_: Exception) { /* ignore */ }
                         MediaScannerConnection.scanFile(this@MainActivity, arrayOf(photoFile.absolutePath), null, null)
-                    } catch (_: Exception) {
-                        Log.e(TAG, "Error post-processing saved image", null)
-                    }
-                }
+                     } catch (_: Exception) {
+                         Log.e(TAG, "Error post-processing saved image", null)
+                     }
+                 }
 
                 // Normalize orientation for the saved file so editor/preview show upright image
                 try {
@@ -519,6 +530,28 @@ class MainActivity : AppCompatActivity() {
         }
         Canvas(result).drawBitmap(source, 0f, 0f, paint)
         return result
+    }
+
+    // Rotate a bitmap according to EXIF orientation (returns the rotated bitmap or original on error)
+    private fun rotateBitmapByExif(bitmap: Bitmap?, exif: ExifInterface?): Bitmap? {
+        if (bitmap == null || exif == null) return bitmap
+        val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
+            ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
+            else -> { /* normal */ }
+        }
+        return try {
+            if (matrix.isIdentity) bitmap else Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        } catch (_: Exception) {
+            bitmap
+        }
     }
 
     // Normalize JPEG orientation: rotate pixel data according to EXIF then set orientation tag to NORMAL
