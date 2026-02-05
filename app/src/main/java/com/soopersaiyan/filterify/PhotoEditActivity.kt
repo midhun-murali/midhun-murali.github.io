@@ -122,8 +122,7 @@ class PhotoEditActivity : AppCompatActivity() {
             isRetouchMode = true
             showRetouchOptions()
             updateModeButtonsUI()
-            // open brightness dialog immediately as a friendly default
-            showRetouchDialog()
+            // removed automatic showRetouchDialog() so tapping Retouch won't open the slider
         }
 
         btnSave.setOnClickListener { saveEditedImage() }
