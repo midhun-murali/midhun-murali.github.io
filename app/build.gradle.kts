@@ -48,6 +48,8 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     // ExifInterface for reading/writing image orientation
     implementation("androidx.exifinterface:exifinterface:1.3.6")
+    // uCrop for cropping UI
+    implementation("com.github.yalantis:ucrop:2.2.8")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

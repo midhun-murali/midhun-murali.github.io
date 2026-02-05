@@ -27,6 +27,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type
+import com.yalantis.ucrop.UCrop
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import java.io.File
 import java.io.FileOutputStream
 import java.io.ByteArrayInputStream
@@ -56,6 +59,8 @@ class PhotoEditActivity : AppCompatActivity() {
     private lateinit var effectsTextEdit: TextView
     private lateinit var retouchTextEdit: TextView
     private var modeContainerOriginalPaddingTop = 0
+    private lateinit var cropLauncher: ActivityResultLauncher<Intent>
+    private var sourceImageUri: Uri? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,6 +85,25 @@ class PhotoEditActivity : AppCompatActivity() {
         if (uriString == null) {
             finish()
             return
+        }
+
+        sourceImageUri = if (uriString.startsWith("content://") || uriString.startsWith("file://")) uriString.toUri() else Uri.fromFile(File(uriString))
+
+        // register crop launcher
+        cropLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                result.data?.let { data ->
+                    val resultUri = UCrop.getOutput(data)
+                    if (resultUri != null) {
+                        // replace originalBitmap with cropped content
+                        val cropped = loadBitmap(resultUri.toString())
+                        if (cropped != null) {
+                            originalBitmap = cropped
+                            applyCurrentFilter()
+                        }
+                    }
+                }
+            }
         }
 
         val bitmap = loadBitmap(uriString)
@@ -223,8 +247,18 @@ class PhotoEditActivity : AppCompatActivity() {
     private fun onRetouchOptionSelected(opt: RetouchOption) {
         when (opt) {
             RetouchOption.CROP -> {
-                // simple placeholder: show a toast (full crop UI is out of scope)
-                Toast.makeText(this, getString(R.string.retouch_crop), Toast.LENGTH_SHORT).show()
+                // start UCrop with sourceImageUri if available
+                val src = sourceImageUri ?: run {
+                    Toast.makeText(this, R.string.error_loading_image, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val destFile = File(cacheDir, "crop_${System.currentTimeMillis()}.jpg")
+                val destUri = Uri.fromFile(destFile)
+                val uCrop = UCrop.of(src, destUri)
+                    .withMaxResultSize(4000, 4000)
+                    .withAspectRatio(0f, 0f)
+                val intent = uCrop.getIntent(this)
+                cropLauncher.launch(intent)
             }
             RetouchOption.ENHANCE -> {
                 // subtle auto-enhance: slightly boost contrast and saturation
