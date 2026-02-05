@@ -45,4 +45,11 @@
     <string name="filter_cool">Cool</string>
     <string name="filter_warm">Warm</string>
     <string name="filter_fade">Fade</string>
+
+    <!-- Retouch option labels -->
+    <string name="retouch_crop">Crop</string>
+    <string name="retouch_enhance">Enhance</string>
+    <string name="retouch_sharpen">Sharpen</string>
+    <string name="retouch_saturation">Saturation</string>
+    <string name="retouch_brightness">Brightness</string>
 </resources>

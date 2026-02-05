@@ -48,6 +48,14 @@ class PhotoEditActivity : AppCompatActivity() {
     private var currentFilter: Filter = Filter.ORIGINAL
     private var brightnessValue = 0f // -100 .. +100
     private var isEffectsMode = true
+    private var isRetouchMode = false
+    private val retouchItems = listOf(
+        RetouchOption.CROP,
+        RetouchOption.ENHANCE,
+        RetouchOption.SHARPEN,
+        RetouchOption.SATURATION,
+        RetouchOption.BRIGHTNESS
+    )
     private lateinit var effectsButtonEdit: LinearLayout
     private lateinit var retouchButtonEdit: LinearLayout
     private lateinit var effectsTextEdit: TextView
@@ -105,12 +113,16 @@ class PhotoEditActivity : AppCompatActivity() {
         updateModeButtonsUI()
         effectsButtonEdit.setOnClickListener {
             isEffectsMode = true
+            isRetouchMode = false
+            showFilters()
             updateModeButtonsUI()
         }
         retouchButtonEdit.setOnClickListener {
             isEffectsMode = false
+            isRetouchMode = true
+            showRetouchOptions()
             updateModeButtonsUI()
-            // open the retouch dialog immediately when user taps Retouch
+            // open brightness dialog immediately as a friendly default
             showRetouchDialog()
         }
 
@@ -119,6 +131,11 @@ class PhotoEditActivity : AppCompatActivity() {
     }
 
     private fun setupFilters() {
+        // initialize carousel initially with filters
+        showFilters()
+    }
+
+    private fun showFilters() {
         val filters = listOf(
             Filter.ORIGINAL,
             Filter.SWEET,
@@ -126,7 +143,6 @@ class PhotoEditActivity : AppCompatActivity() {
             Filter.BLOOM,
             Filter.VINTAGE,
             Filter.MONO,
-            // new commonly used filters
             Filter.SEPIA,
             Filter.VIBRANT,
             Filter.CINEMATIC,
@@ -140,6 +156,38 @@ class PhotoEditActivity : AppCompatActivity() {
             applyCurrentFilter()
         }
         filterCarousel.adapter = adapter
+    }
+
+    private fun showRetouchOptions() {
+        filterCarousel.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        val adapter = RetouchAdapter(retouchItems) { opt ->
+            onRetouchOptionSelected(opt)
+        }
+        filterCarousel.adapter = adapter
+    }
+
+    private fun onRetouchOptionSelected(opt: RetouchOption) {
+        when (opt) {
+            RetouchOption.CROP -> {
+                // simple placeholder: show a toast (full crop UI is out of scope)
+                Toast.makeText(this, getString(R.string.retouch_crop), Toast.LENGTH_SHORT).show()
+            }
+            RetouchOption.ENHANCE -> {
+                // subtle auto-enhance: slightly boost contrast and saturation
+                originalBitmap = originalBitmap?.let { applyEnhance(it) }
+                applyCurrentFilter()
+            }
+            RetouchOption.SHARPEN -> {
+                originalBitmap = originalBitmap?.let { applySharpen(it) }
+                applyCurrentFilter()
+            }
+            RetouchOption.SATURATION -> {
+                showSaturationDialog()
+            }
+            RetouchOption.BRIGHTNESS -> {
+                showRetouchDialog()
+            }
+        }
     }
 
     private fun applyCurrentFilter() {
@@ -193,6 +241,82 @@ class PhotoEditActivity : AppCompatActivity() {
         dialog.show()
     }
 
+    // Apply a subtle enhance (contrast + warm lift) and return a new bitmap (recycles input)
+    private fun applyEnhance(bmp: Bitmap): Bitmap {
+        val result = createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        val cm = ColorMatrix().apply {
+            set(floatArrayOf(
+                1.06f, 0f, 0f, 0f, 6f,
+                0f, 1.06f, 0f, 0f, 6f,
+                0f, 0f, 1.06f, 0f, 6f,
+                0f, 0f, 0f, 1f, 0f
+            ))
+        }
+        val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(cm); isFilterBitmap = true }
+        canvas.drawBitmap(bmp, 0f, 0f, paint)
+        if (!bmp.isRecycled) bmp.recycle()
+        return result
+    }
+
+    // Apply a mild sharpen-like effect (implemented as slight contrast boost) and return new bitmap (recycles input)
+    private fun applySharpen(bmp: Bitmap): Bitmap {
+        val result = createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        val cm = ColorMatrix().apply {
+            set(floatArrayOf(
+                1.09f, 0f, 0f, 0f, 0f,
+                0f, 1.09f, 0f, 0f, 0f,
+                0f, 0f, 1.09f, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f
+            ))
+        }
+        val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(cm); isFilterBitmap = true }
+        canvas.drawBitmap(bmp, 0f, 0f, paint)
+        if (!bmp.isRecycled) bmp.recycle()
+        return result
+    }
+
+    // Apply saturation to a bitmap and return a new bitmap without recycling the source (used for interactive preview)
+    private fun applySaturationImmutable(src: Bitmap, sat: Float): Bitmap {
+        val cm = ColorMatrix().apply { setSaturation(sat) }
+        val result = createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(cm); isFilterBitmap = true }
+        canvas.drawBitmap(src, 0f, 0f, paint)
+        return result
+    }
+
+    private fun showSaturationDialog() {
+        val seekBar = SeekBar(this).apply { max = 200; progress = 100 }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.retouch_saturation)
+            .setView(seekBar)
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        // Keep a snapshot of the current original so we don't permanently alter it during preview
+        val base = originalBitmap ?: return
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                val sat = progress / 100f
+                // create preview from base without mutating base
+                val preview = applySaturationImmutable(base, sat)
+                workingBitmap?.recycle()
+                workingBitmap = preview
+                imageView.setImageBitmap(workingBitmap)
+            }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {
+                // when user stops, commit the change to originalBitmap
+                val finalSat = seekBar.progress / 100f
+                originalBitmap = applySaturationImmutable(base, finalSat)
+                applyCurrentFilter()
+            }
+        })
+        dialog.show()
+    }
+
     private fun saveEditedImage() {
         val bmp = workingBitmap ?: return
         val outDir = getOutputDirectory()
@@ -224,7 +348,7 @@ class PhotoEditActivity : AppCompatActivity() {
                     }
                 }
                 uriString.startsWith("file://") -> {
-                    val uri = Uri.parse(uriString)
+                    val uri = uriString.toUri()
                     val path = uri.path ?: return null
                     val bmp = BitmapFactory.decodeFile(path)
                     val exif = ExifInterface(path)
