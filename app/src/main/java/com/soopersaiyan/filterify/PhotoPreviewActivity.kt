@@ -9,13 +9,17 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type
 import androidx.exifinterface.media.ExifInterface
+import com.google.android.gms.ads.AdListener
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.MobileAds
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -29,12 +33,24 @@ class PhotoPreviewActivity : AppCompatActivity() {
 
     private var imageUri: Uri? = null
     private var imageFile: File? = null
-    private var previewOriginalPaddingTop = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
         setContentView(R.layout.activity_photo_preview)
+
+        // Initialize mobile ads SDK and load banner if adView exists in layout
+        MobileAds.initialize(this) {}
+        val adViewId = resources.getIdentifier("adView", "id", packageName)
+        if (adViewId != 0) {
+            val av = findViewById<AdView>(adViewId)
+            val adRequest = AdRequest.Builder().build()
+            av.loadAd(adRequest)
+            av.adListener = object : AdListener() {
+                override fun onAdLoaded() { av.visibility = View.VISIBLE }
+                override fun onAdFailedToLoad(p0: LoadAdError) { av.visibility = View.GONE }
+            }
+        }
 
         imageView = findViewById(R.id.previewImage)
         btnDelete = findViewById(R.id.btnDelete)

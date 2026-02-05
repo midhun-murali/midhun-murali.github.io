@@ -30,6 +30,11 @@ import androidx.core.view.WindowInsetsCompat.Type
 import com.yalantis.ucrop.UCrop
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.AdListener
+import com.google.android.gms.ads.LoadAdError
 import java.io.File
 import java.io.FileOutputStream
 import java.io.ByteArrayInputStream
@@ -61,11 +66,22 @@ class PhotoEditActivity : AppCompatActivity() {
     private var modeContainerOriginalPaddingTop = 0
     private lateinit var cropLauncher: ActivityResultLauncher<Intent>
     private var sourceImageUri: Uri? = null
+    private lateinit var adView: AdView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
         setContentView(R.layout.activity_photo_edit)
+
+        // Initialize ads and load banner
+        MobileAds.initialize(this) {}
+        adView = findViewById(R.id.adView)
+        val adRequest = AdRequest.Builder().build()
+        adView.loadAd(adRequest)
+        adView.adListener = object : AdListener() {
+            override fun onAdLoaded() { adView.visibility = View.VISIBLE }
+            override fun onAdFailedToLoad(p0: LoadAdError) { adView.visibility = View.GONE }
+        }
 
         imageView = findViewById(R.id.previewView)
         filterCarousel = findViewById(R.id.filterCarousel)
