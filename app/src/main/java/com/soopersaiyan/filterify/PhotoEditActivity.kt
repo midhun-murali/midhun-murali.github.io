@@ -49,13 +49,8 @@ class PhotoEditActivity : AppCompatActivity() {
     private var brightnessValue = 0f // -100 .. +100
     private var isEffectsMode = true
     private var isRetouchMode = false
-    private val retouchItems = listOf(
-        RetouchOption.CROP,
-        RetouchOption.ENHANCE,
-        RetouchOption.SHARPEN,
-        RetouchOption.SATURATION,
-        RetouchOption.BRIGHTNESS
-    )
+    // show all available retouch options
+    private val retouchItems = RetouchOption.entries.toList()
     private lateinit var effectsButtonEdit: LinearLayout
     private lateinit var retouchButtonEdit: LinearLayout
     private lateinit var effectsTextEdit: TextView
@@ -165,33 +160,9 @@ class PhotoEditActivity : AppCompatActivity() {
         filterCarousel.adapter = adapter
     }
 
-    private fun onRetouchOptionSelected(opt: RetouchOption) {
-        when (opt) {
-            RetouchOption.CROP -> {
-                // simple placeholder: show a toast (full crop UI is out of scope)
-                Toast.makeText(this, getString(R.string.retouch_crop), Toast.LENGTH_SHORT).show()
-            }
-            RetouchOption.ENHANCE -> {
-                // subtle auto-enhance: slightly boost contrast and saturation
-                originalBitmap = originalBitmap?.let { applyEnhance(it) }
-                applyCurrentFilter()
-            }
-            RetouchOption.SHARPEN -> {
-                originalBitmap = originalBitmap?.let { applySharpen(it) }
-                applyCurrentFilter()
-            }
-            RetouchOption.SATURATION -> {
-                showSaturationDialog()
-            }
-            RetouchOption.BRIGHTNESS -> {
-                showBrightnessDialog()
-            }
-        }
-    }
-
+    // Apply current selected filter and brightness to originalBitmap and update workingBitmap/imageView
     private fun applyCurrentFilter() {
         val orig = originalBitmap ?: return
-        // Create a new bitmap applying color matrix + brightness
         val result = createBitmap(orig.width, orig.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(result)
         val matrix = currentFilter.matrix()
@@ -213,37 +184,8 @@ class PhotoEditActivity : AppCompatActivity() {
         imageView.setImageBitmap(workingBitmap)
     }
 
-    private fun showBrightnessDialog() {
-        val seekBar = SeekBar(this).apply {
-            max = 200
-            progress = (brightnessValue + 100f).toInt()
-        }
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.retouch_brightness)
-            .setView(seekBar)
-            .setPositiveButton(R.string.save) { _, _ ->
-                // save brightnessValue and apply
-                brightnessValue = (seekBar.progress - 100).toFloat()
-                applyCurrentFilter()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .create()
-        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                brightnessValue = (progress - 100).toFloat()
-                applyCurrentFilter()
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        dialog.show()
-    }
-
-    // Apply a subtle enhance (contrast + warm lift) and return a new bitmap (recycles input)
-    private fun applyEnhance(bmp: Bitmap): Bitmap {
-        val result = createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(result)
+    // Subtle enhance: small contrast + saturation boost
+    private fun applyEnhance(src: Bitmap): Bitmap {
         val cm = ColorMatrix().apply {
             set(floatArrayOf(
                 1.06f, 0f, 0f, 0f, 6f,
@@ -252,16 +194,11 @@ class PhotoEditActivity : AppCompatActivity() {
                 0f, 0f, 0f, 1f, 0f
             ))
         }
-        val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(cm); isFilterBitmap = true }
-        canvas.drawBitmap(bmp, 0f, 0f, paint)
-        if (!bmp.isRecycled) bmp.recycle()
-        return result
+        return applyColorMatrix(src, cm)
     }
 
-    // Apply a mild sharpen-like effect (implemented as slight contrast boost) and return new bitmap (recycles input)
-    private fun applySharpen(bmp: Bitmap): Bitmap {
-        val result = createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(result)
+    // Mild sharpen-like effect (implemented as a contrast boost placeholder)
+    private fun applySharpen(src: Bitmap): Bitmap {
         val cm = ColorMatrix().apply {
             set(floatArrayOf(
                 1.09f, 0f, 0f, 0f, 0f,
@@ -270,13 +207,10 @@ class PhotoEditActivity : AppCompatActivity() {
                 0f, 0f, 0f, 1f, 0f
             ))
         }
-        val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(cm); isFilterBitmap = true }
-        canvas.drawBitmap(bmp, 0f, 0f, paint)
-        if (!bmp.isRecycled) bmp.recycle()
-        return result
+        return applyColorMatrix(src, cm)
     }
 
-    // Apply saturation to a bitmap and return a new bitmap without recycling the source (used for interactive preview)
+    // Saturation that doesn't recycle source (used for preview/immutable operations)
     private fun applySaturationImmutable(src: Bitmap, sat: Float): Bitmap {
         val cm = ColorMatrix().apply { setSaturation(sat) }
         val result = createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
@@ -286,34 +220,276 @@ class PhotoEditActivity : AppCompatActivity() {
         return result
     }
 
-    private fun showSaturationDialog() {
-        val seekBar = SeekBar(this).apply { max = 200; progress = 100 }
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.retouch_saturation)
-            .setView(seekBar)
-            .setPositiveButton(R.string.save, null)
-            .setNegativeButton(android.R.string.cancel, null)
-            .create()
-        // Keep a snapshot of the current original so we don't permanently alter it during preview
-        val base = originalBitmap ?: return
-        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                val sat = progress / 100f
-                // create preview from base without mutating base
-                val preview = applySaturationImmutable(base, sat)
-                workingBitmap?.recycle()
-                workingBitmap = preview
-                imageView.setImageBitmap(workingBitmap)
+    private fun onRetouchOptionSelected(opt: RetouchOption) {
+        when (opt) {
+            RetouchOption.CROP -> {
+                // simple placeholder: show a toast (full crop UI is out of scope)
+                Toast.makeText(this, getString(R.string.retouch_crop), Toast.LENGTH_SHORT).show()
             }
-            override fun onStartTrackingTouch(sb: SeekBar?) {}
-            override fun onStopTrackingTouch(sb: SeekBar?) {
-                // when user stops, commit the change to originalBitmap
-                val finalSat = seekBar.progress / 100f
-                originalBitmap = applySaturationImmutable(base, finalSat)
+            RetouchOption.ENHANCE -> {
+                // subtle auto-enhance: slightly boost contrast and saturation
+                originalBitmap = originalBitmap?.let { applyEnhance(it) }
                 applyCurrentFilter()
             }
+            RetouchOption.SHARPEN -> {
+                originalBitmap = originalBitmap?.let { applySharpen(it) }
+                applyCurrentFilter()
+            }
+            RetouchOption.SATURATION -> showSliderDialog(R.string.retouch_saturation, 100,
+                { progress ->
+                    // live preview
+                    val sat = progress / 100f
+                    workingBitmap?.recycle()
+                    workingBitmap = originalBitmap?.let { applySaturationImmutable(it, sat) }
+                    imageView.setImageBitmap(workingBitmap)
+                },
+                { final ->
+                    originalBitmap = originalBitmap?.let { applySaturationImmutable(it, final / 100f) }
+                    applyCurrentFilter()
+                }
+            )
+            RetouchOption.BRIGHTNESS -> showSliderDialog(R.string.retouch_brightness, (brightnessValue + 100f).toInt(),
+                { progress ->
+                    brightnessValue = (progress - 100).toFloat()
+                    applyCurrentFilter()
+                },
+                { _ -> /* committed already applied */ }
+            )
+            RetouchOption.EXPOSURE -> showSliderDialog(R.string.retouch_exposure, 100,
+                { p ->
+                    val exposure = (p - 100) / 50f // -2..+2
+                    workingBitmap?.recycle()
+                    workingBitmap = originalBitmap?.let { applyExposure(it, exposure) }
+                    imageView.setImageBitmap(workingBitmap)
+                },
+                { final -> originalBitmap = originalBitmap?.let { applyExposure(it, (final - 100) / 50f) }; applyCurrentFilter() }
+            )
+            RetouchOption.CONTRAST -> showSliderDialog(R.string.retouch_contrast, 100,
+                { p ->
+                    val c = p / 100f // 0..2
+                    workingBitmap?.recycle()
+                    workingBitmap = originalBitmap?.let { applyContrast(it, c) }
+                    imageView.setImageBitmap(workingBitmap)
+                },
+                { final -> originalBitmap = originalBitmap?.let { applyContrast(it, final / 100f) }; applyCurrentFilter() }
+            )
+            RetouchOption.TEMPERATURE -> showSliderDialog(R.string.retouch_temperature, 100,
+                { p ->
+                    val t = (p - 100) / 50f // -2..+2
+                    workingBitmap?.recycle()
+                    workingBitmap = originalBitmap?.let { applyTemperature(it, t) }
+                    imageView.setImageBitmap(workingBitmap)
+                },
+                { final -> originalBitmap = originalBitmap?.let { applyTemperature(it, (final - 100) / 50f) }; applyCurrentFilter() }
+            )
+            RetouchOption.TINT -> showSliderDialog(R.string.retouch_tint, 100,
+                { p ->
+                    val tt = (p - 100) / 100f
+                    workingBitmap?.recycle()
+                    workingBitmap = originalBitmap?.let { applyTint(it, tt) }
+                    imageView.setImageBitmap(workingBitmap)
+                },
+                { final -> originalBitmap = originalBitmap?.let { applyTint(it, (final - 100) / 100f) }; applyCurrentFilter() }
+            )
+            RetouchOption.HIGHLIGHTS -> showSliderDialog(R.string.retouch_highlights, 100,
+                { p ->
+                    // simple emulate: adjust brightness on highlights by scaling (placeholder)
+                    val f = p / 100f
+                    workingBitmap?.recycle()
+                    workingBitmap = originalBitmap?.let { applyHighlights(it, f) }
+                    imageView.setImageBitmap(workingBitmap)
+                },
+                { final -> originalBitmap = originalBitmap?.let { applyHighlights(it, final / 100f) }; applyCurrentFilter() }
+            )
+            RetouchOption.SHADOWS -> showSliderDialog(R.string.retouch_shadows, 100,
+                { p ->
+                    val f = p / 100f
+                    workingBitmap?.recycle()
+                    workingBitmap = originalBitmap?.let { applyShadows(it, f) }
+                    imageView.setImageBitmap(workingBitmap)
+                },
+                { final -> originalBitmap = originalBitmap?.let { applyShadows(it, final / 100f) }; applyCurrentFilter() }
+            )
+            RetouchOption.VIGNETTE -> showSliderDialog(R.string.retouch_vignette, 0,
+                { p ->
+                    val v = p / 100f
+                    workingBitmap?.recycle()
+                    workingBitmap = originalBitmap?.let { applyVignette(it, v) }
+                    imageView.setImageBitmap(workingBitmap)
+                },
+                { final -> originalBitmap = originalBitmap?.let { applyVignette(it, final / 100f) }; applyCurrentFilter() }
+            )
+            RetouchOption.SMOOTH -> {
+                originalBitmap = originalBitmap?.let { applySmooth(it) }
+                applyCurrentFilter()
+            }
+            RetouchOption.CLARITY -> {
+                originalBitmap = originalBitmap?.let { applyClarity(it) }
+                applyCurrentFilter()
+            }
+            RetouchOption.ROTATE -> {
+                originalBitmap = originalBitmap?.let { rotateBitmap(it, 90f) }
+                applyCurrentFilter()
+            }
+            RetouchOption.FLIP -> {
+                originalBitmap = originalBitmap?.let { flipBitmap(it) }
+                applyCurrentFilter()
+            }
+            RetouchOption.AUTO -> {
+                // alias to enhance
+                originalBitmap = originalBitmap?.let { applyEnhance(it) }
+                applyCurrentFilter()
+            }
+        }
+    }
+
+    // Generic slider dialog helper: titleRes, initialProgress, onChange(progress), onCommit(progress)
+    private fun showSliderDialog(titleRes: Int, initialProgress: Int, onChange: (Int) -> Unit, onCommit: (Int) -> Unit) {
+        val seekBar = SeekBar(this).apply { max = 200; progress = initialProgress }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(titleRes)
+            .setView(seekBar)
+            .setPositiveButton(R.string.save) { _, _ -> onCommit(seekBar.progress) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) { onChange(progress) }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
         })
         dialog.show()
+    }
+
+    // Simple implementations of new retouch transforms (fast, approximate)
+    private fun applyExposure(src: Bitmap, exposure: Float): Bitmap {
+        // exposure: -2..+2 mapped to translate brightness
+        val translateVal = exposure * 20f
+        val cm = ColorMatrix().apply { set(floatArrayOf(
+            1f,0f,0f,0f,translateVal,
+            0f,1f,0f,0f,translateVal,
+            0f,0f,1f,0f,translateVal,
+            0f,0f,0f,1f,0f
+        )) }
+        return applyColorMatrix(src, cm)
+    }
+
+    private fun applyContrast(src: Bitmap, contrast: Float): Bitmap {
+        val scale = contrast
+        val translate = (-0.5f * scale + 0.5f) * 255f
+        val cm = ColorMatrix().apply { set(floatArrayOf(
+            scale,0f,0f,0f,translate,
+            0f,scale,0f,0f,translate,
+            0f,0f,scale,0f,translate,
+            0f,0f,0f,1f,0f
+        )) }
+        return applyColorMatrix(src, cm)
+    }
+
+    private fun applyTemperature(src: Bitmap, temp: Float): Bitmap {
+        // temp approx: shift red/blue gains
+        val rScale = 1f + temp * 0.1f
+        val bScale = 1f - temp * 0.1f
+        val cm = ColorMatrix().apply { set(floatArrayOf(
+            rScale,0f,0f,0f,0f,
+            0f,1f,0f,0f,0f,
+            0f,0f,bScale,0f,0f,
+            0f,0f,0f,1f,0f
+        )) }
+        return applyColorMatrix(src, cm)
+    }
+
+    private fun applyTint(src: Bitmap, tint: Float): Bitmap {
+        // tint: positive -> more magenta, negative -> more green
+        val rScale = 1f + tint * 0.05f
+        val gScale = 1f - tint * 0.05f
+        val bScale = 1f + tint * 0.02f
+        val cm = ColorMatrix().apply { set(floatArrayOf(
+            rScale,0f,0f,0f,0f,
+            0f,gScale,0f,0f,0f,
+            0f,0f,bScale,0f,0f,
+            0f,0f,0f,1f,0f
+        )) }
+        return applyColorMatrix(src, cm)
+    }
+
+    private fun applyHighlights(src: Bitmap, f: Float): Bitmap {
+        // placeholder: slightly brighten overall with f factor
+        val cm = ColorMatrix().apply { set(floatArrayOf(
+            1f,0f,0f,0f, f * 10f,
+            0f,1f,0f,0f, f * 10f,
+            0f,0f,1f,0f, f * 10f,
+            0f,0f,0f,1f,0f
+        )) }
+        return applyColorMatrix(src, cm)
+    }
+
+    private fun applyShadows(src: Bitmap, f: Float): Bitmap {
+        // placeholder: slightly lift shadows by a small gamma-like scale
+        val cm = ColorMatrix().apply { set(floatArrayOf(
+            1f,0f,0f,0f, -f * 10f,
+            0f,1f,0f,0f, -f * 10f,
+            0f,0f,1f,0f, -f * 10f,
+            0f,0f,0f,1f,0f
+        )) }
+        return applyColorMatrix(src, cm)
+    }
+
+    private fun applyVignette(src: Bitmap, strength: Float): Bitmap {
+        val w = src.width
+        val h = src.height
+        val result = createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        canvas.drawBitmap(src, 0f, 0f, null)
+        if (strength <= 0f) return result
+        try {
+            val paint = Paint()
+            val radius = Math.hypot(w.toDouble()/2.0, h.toDouble()/2.0).toFloat()
+            val shader = android.graphics.RadialGradient(
+                (w/2).toFloat(), (h/2).toFloat(), radius,
+                intArrayOf(0x00000000, 0x7f000000), floatArrayOf(0.5f, 1f), android.graphics.Shader.TileMode.CLAMP)
+            paint.shader = shader
+            paint.alpha = (strength * 200).toInt().coerceIn(0,255)
+            canvas.drawRect(0f,0f,w.toFloat(),h.toFloat(), paint)
+        } catch (_: Exception) {}
+        return result
+    }
+
+    private fun applySmooth(src: Bitmap): Bitmap {
+        // placeholder: slight desaturation + blur-like effect via scaled draw
+        val small = Bitmap.createScaledBitmap(src, src.width/2, src.height/2, true)
+        val result = createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        canvas.drawBitmap(Bitmap.createScaledBitmap(small, src.width, src.height, true), 0f, 0f, null)
+        small.recycle()
+        return result
+    }
+
+    private fun applyClarity(src: Bitmap): Bitmap {
+        // clarity ~ midtone contrast boost -> simple contrast increase
+        return applyContrast(src, 1.08f)
+    }
+
+    private fun rotateBitmap(src: Bitmap, degrees: Float): Bitmap {
+        val matrix = Matrix().apply { postRotate(degrees) }
+        val out = Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+        src.recycle()
+        return out
+    }
+
+    private fun flipBitmap(src: Bitmap): Bitmap {
+        val matrix = Matrix().apply { preScale(-1f, 1f) }
+        val out = Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+        src.recycle()
+        return out
+    }
+
+    private fun applyColorMatrix(src: Bitmap, cm: ColorMatrix): Bitmap {
+        val result = createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(cm); isFilterBitmap = true }
+        canvas.drawBitmap(src, 0f, 0f, paint)
+        src.recycle()
+        return result
     }
 
     private fun saveEditedImage() {

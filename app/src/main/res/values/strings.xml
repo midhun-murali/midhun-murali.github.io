@@ -52,4 +52,15 @@
     <string name="retouch_sharpen">Sharpen</string>
     <string name="retouch_saturation">Saturation</string>
     <string name="retouch_brightness">Brightness</string>
+    <string name="retouch_rotate">Rotate</string>
+    <string name="retouch_flip">Flip</string>
+    <string name="retouch_exposure">Exposure</string>
+    <string name="retouch_contrast">Contrast</string>
+    <string name="retouch_temperature">Temperature</string>
+    <string name="retouch_tint">Tint</string>
+    <string name="retouch_highlights">Highlights</string>
+    <string name="retouch_shadows">Shadows</string>
+    <string name="retouch_vignette">Vignette</string>
+    <string name="retouch_smooth">Smooth</string>
+    <string name="retouch_clarity">Clarity</string>
 </resources>

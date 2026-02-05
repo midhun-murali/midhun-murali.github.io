@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:ads="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white">
@@ -42,6 +41,7 @@
         android:layout_height="0dp"
         android:scaleType="centerCrop"
         android:visibility="gone"
+        android:contentDescription="@string/preview_image"
         app:layout_constraintTop_toBottomOf="@+id/topBar"
         app:layout_constraintBottom_toTopOf="@+id/filterCarousel"
         app:layout_constraintStart_toStartOf="parent"
@@ -54,7 +54,7 @@
         android:layout_height="40dp"
         android:src="@drawable/ic_close"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Close"
+        android:contentDescription="@string/close"
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="@+id/topBar"
         app:layout_constraintEnd_toEndOf="parent"
@@ -105,7 +105,7 @@
             android:layout_height="32dp"
             android:src="@drawable/ic_flash"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Flash"
+            android:contentDescription="@string/flash"
             android:padding="4dp"
             android:layout_marginStart="16dp" />
 
@@ -124,6 +124,7 @@
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:src="@drawable/ic_timer"
+                android:contentDescription="@string/timer_3s"
                 android:layout_marginEnd="4dp" />
             <TextView
                 android:id="@+id/timerText"
@@ -147,7 +148,7 @@
             android:layout_height="40dp"
             android:src="@drawable/ic_camera_switch"
             android:background="@drawable/shutter_button_outer"
-            android:contentDescription="Switch Camera"
+            android:contentDescription="@string/switch_camera"
             android:padding="8dp" />
     </LinearLayout>
 
@@ -202,6 +203,7 @@
                 android:layout_width="88dp"
                 android:layout_height="88dp"
                 android:src="@drawable/shutter_button_outer"
+                android:contentDescription="@string/capture_photo"
                 android:layout_gravity="center" />
 
             <!-- Inner Button -->
@@ -210,7 +212,7 @@
                 android:layout_width="80dp"
                 android:layout_height="80dp"
                 android:background="@drawable/shutter_button_background"
-                android:contentDescription="Capture Photo"
+                android:contentDescription="@string/capture_photo"
                 android:layout_gravity="center"
                 android:elevation="4dp" />
         </FrameLayout>
