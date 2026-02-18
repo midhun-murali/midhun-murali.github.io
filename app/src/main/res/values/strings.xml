@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Filterify</string>
+    <string name="app_name">Beauty Camera</string>
     <string name="admob_app_id">ca-app-pub-2971816084619981~8115258035</string>
     <string name="admob_banner_id">ca-app-pub-2971816084619981/7329516321</string>
     <string name="photo_saved">Photo saved to %1$s</string>

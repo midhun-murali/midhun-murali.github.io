@@ -1,4 +1,4 @@
-package com.soopersaiyan.filterify
+package com.beauty.camera.selfie.camera.filter
 
 /**
  * Retouch options shown in the editor when retouch mode is active.

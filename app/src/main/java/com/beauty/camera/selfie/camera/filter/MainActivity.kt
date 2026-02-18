@@ -1,4 +1,4 @@
-package com.soopersaiyan.filterify
+package com.beauty.camera.selfie.camera.filter
 
 import android.Manifest
 import android.content.Intent

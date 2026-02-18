@@ -3,13 +3,13 @@ plugins {
 }
 
 android {
-    namespace = "com.soopersaiyan.filterify"
+    namespace = "com.beauty.camera.selfie.camera.filter"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.soopersaiyan.filterify"
+        applicationId = "com.beauty.camera.selfie.camera.filter"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

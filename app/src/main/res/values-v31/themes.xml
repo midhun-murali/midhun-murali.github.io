@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ splash screen attributes to suppress the centered icon and use our window background -->
+    <style name="Theme.Splash" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_window_background</item>
+        <!-- Remove the default animated icon shown by Android 12+ splash screen -->
+        <item name="android:windowSplashScreenAnimatedIcon">@null</item>
+        <!-- Ensure the splash background uses our drawable (fallback) -->
+        <item name="android:windowSplashScreenBackground">@android:color/transparent</item>
+    </style>
+</resources>

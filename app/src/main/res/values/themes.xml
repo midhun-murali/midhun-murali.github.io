@@ -18,4 +18,11 @@
         <item name="android:windowNoTitle">true</item>
         <!-- Customize your theme here. -->
     </style>
+
+    <!-- Simple splash theme: window background shows the splash image immediately on cold start -->
+    <style name="Theme.Splash" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_window_background</item>
+        <item name="windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
 </resources>
