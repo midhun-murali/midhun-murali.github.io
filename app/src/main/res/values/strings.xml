@@ -63,4 +63,8 @@
     <string name="retouch_vignette">Vignette</string>
     <string name="retouch_smooth">Smooth</string>
     <string name="retouch_clarity">Clarity</string>
+
+    <!-- Settings strings -->
+    <string name="save_original_photo">Replace Original Photo</string>
+    <string name="version_placeholder">Version 1.0.0</string>
 </resources>
