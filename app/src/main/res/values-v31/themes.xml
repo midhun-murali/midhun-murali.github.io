@@ -9,7 +9,7 @@
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
         <!-- Disable animation duration so no animation is shown -->
         <item name="android:windowSplashScreenAnimationDuration">0</item>
-        <!-- Ensure the splash background uses our drawable (fallback) -->
-        <item name="android:windowSplashScreenBackground">@android:color/transparent</item>
+        <!-- Ensure the system splash background color is white so edges/underlay appear white -->
+        <item name="android:windowSplashScreenBackground">@android:color/white</item>
     </style>
 </resources>
