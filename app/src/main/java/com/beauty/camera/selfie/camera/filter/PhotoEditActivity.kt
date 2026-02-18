@@ -38,6 +38,8 @@ import com.google.android.gms.ads.LoadAdError
 import java.io.File
 import java.io.FileOutputStream
 import java.io.ByteArrayInputStream
+import android.media.MediaScannerConnection
+import android.content.Context
 
 class PhotoEditActivity : AppCompatActivity() {
 
@@ -544,10 +546,43 @@ class PhotoEditActivity : AppCompatActivity() {
 
     private fun saveEditedImage() {
         val bmp = workingBitmap ?: return
-        val outDir = getOutputDirectory()
-        val outFile = File(outDir, "edited_${System.currentTimeMillis()}.jpg")
+        val prefs = getSharedPreferences("beauty_prefs", Context.MODE_PRIVATE)
+        val replaceOriginal = prefs.getBoolean("replace_original", false)
+
         try {
+            if (replaceOriginal) {
+                // Try to overwrite the original file when possible (file:// or absolute path)
+                val src = sourceImageUri
+                val targetFile = when {
+                    src == null -> null
+                    src.scheme == "file" -> File(src.path ?: "")
+                    else -> {
+                        // if the source was passed as an absolute path string (no scheme) we stored it as file:// earlier
+                        val s = src.path
+                        if (s != null && File(s).exists()) File(s) else null
+                    }
+                }
+                if (targetFile != null) {
+                    try {
+                        FileOutputStream(targetFile).use { bmp.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+                        MediaScannerConnection.scanFile(this, arrayOf(targetFile.absolutePath), null, null)
+                        val intent = Intent(this, PhotoPreviewActivity::class.java).apply {
+                            putExtra(PhotoPreviewActivity.EXTRA_IMAGE_URI, targetFile.absolutePath)
+                        }
+                        startActivity(intent)
+                        finish()
+                        return
+                    } catch (_: Exception) {
+                        // If overwrite fails fall back to saving new file below
+                    }
+                }
+            }
+
+            // Fallback: save a new edited file (default behavior)
+            val outDir = getOutputDirectory()
+            val outFile = File(outDir, "edited_${System.currentTimeMillis()}.jpg")
             FileOutputStream(outFile).use { bmp.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+            MediaScannerConnection.scanFile(this, arrayOf(outFile.absolutePath), null, null)
             // Open PhotoPreviewActivity with saved file path
             val fileUriString = Uri.fromFile(outFile).toString()
             val intent = Intent(this, PhotoPreviewActivity::class.java).apply {

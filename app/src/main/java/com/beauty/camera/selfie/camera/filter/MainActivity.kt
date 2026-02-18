@@ -255,8 +255,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         settingsButton?.setOnClickListener {
-            // Settings functionality can be added later
-            Toast.makeText(this, "Settings coming soon", Toast.LENGTH_SHORT).show()
+            // Open Settings screen
+            SettingsActivity.start(this)
         }
 
         closeGalleryButton.setOnClickListener {

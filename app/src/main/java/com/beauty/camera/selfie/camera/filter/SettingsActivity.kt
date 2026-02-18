@@ -24,9 +24,9 @@ class SettingsActivity : AppCompatActivity() {
         switchReplaceOriginal = findViewById(R.id.switch_replace_original)
         versionLabel = findViewById(R.id.version_label)
 
-        // Load saved preference
+        // Load saved preference (default: false)
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val saveOriginal = prefs.getBoolean(PREF_REPLACE_ORIGINAL, true)
+        val saveOriginal = prefs.getBoolean(PREF_REPLACE_ORIGINAL, false)
         switchReplaceOriginal.isChecked = saveOriginal
 
         switchReplaceOriginal.setOnCheckedChangeListener { _, isChecked ->
@@ -53,4 +53,3 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 }
-
