@@ -473,6 +473,23 @@ class PhotoEditActivity : AppCompatActivity() {
     // Generic slider dialog helper: titleRes, initialProgress, onChange(progress), onCommit(progress)
     private fun showSliderDialog(titleRes: Int, initialProgress: Int, onChange: (Int) -> Unit, onCommit: (Int) -> Unit) {
         val seekBar = SeekBar(this).apply { max = 200; progress = initialProgress }
+        // Apply pink theme tinting to the SeekBar for progress and thumb
+        try {
+            val accent = getColor(R.color.pink_accent)
+            val selected = getColor(R.color.pink_selected)
+            val states = arrayOf(intArrayOf(android.R.attr.state_enabled))
+            val colors = intArrayOf(accent)
+            val csl = android.content.res.ColorStateList(states, colors)
+            // progress tint (primary)
+            seekBar.progressTintList = csl
+            // secondary progress (track behind) use a lighter pink
+            val sec = android.content.res.ColorStateList(states, intArrayOf(getColor(R.color.pink_medium)))
+            seekBar.progressBackgroundTintList = sec
+            // thumb tint
+            seekBar.thumbTintList = android.content.res.ColorStateList(states, intArrayOf(selected))
+        } catch (_: Exception) {
+            // ignore on older devices
+        }
         val dialog = AlertDialog.Builder(this)
             .setTitle(titleRes)
             .setView(seekBar)
