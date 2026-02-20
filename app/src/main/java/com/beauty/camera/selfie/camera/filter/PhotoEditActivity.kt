@@ -241,15 +241,8 @@ class PhotoEditActivity : AppCompatActivity() {
 
     // Mild sharpen-like effect (implemented as a contrast boost placeholder)
     private fun applySharpen(src: Bitmap): Bitmap {
-        val cm = ColorMatrix().apply {
-            set(floatArrayOf(
-                1.09f, 0f, 0f, 0f, 0f,
-                0f, 1.09f, 0f, 0f, 0f,
-                0f, 0f, 1.09f, 0f, 0f,
-                0f, 0f, 0f, 1f, 0f
-            ))
-        }
-        return applyColorMatrix(src, cm)
+        // Delegate to amount-based sharpen with a small default amount (0.35)
+        return applySharpen(src, 0.35f)
     }
 
     // Saturation that doesn't recycle source (used for preview/immutable operations)
@@ -284,8 +277,20 @@ class PhotoEditActivity : AppCompatActivity() {
                 applyCurrentFilter()
             }
             RetouchOption.SHARPEN -> {
-                originalBitmap = originalBitmap?.let { applySharpen(it) }
-                applyCurrentFilter()
+                // show slider for sharpen amount (0..100 -> 0..1)
+                showSliderDialog(R.string.retouch_sharpen, 35,
+                    { progress ->
+                        val amt = progress / 100f
+                        workingBitmap?.recycle()
+                        workingBitmap = originalBitmap?.let { applySharpen(it, amt) }
+                        imageView.setImageBitmap(workingBitmap)
+                    },
+                    { final ->
+                        val amt = final / 100f
+                        originalBitmap = originalBitmap?.let { applySharpen(it, amt) }
+                        applyCurrentFilter()
+                    }
+                )
             }
             RetouchOption.SATURATION -> showSliderDialog(R.string.retouch_saturation, 100,
                 { progress ->
@@ -372,12 +377,36 @@ class PhotoEditActivity : AppCompatActivity() {
                 { final -> originalBitmap = originalBitmap?.let { applyVignette(it, final / 100f) }; applyCurrentFilter() }
             )
             RetouchOption.SMOOTH -> {
-                originalBitmap = originalBitmap?.let { applySmooth(it) }
-                applyCurrentFilter()
+                // slider for smooth strength
+                showSliderDialog(R.string.retouch_smooth, 60,
+                    { progress ->
+                        val s = progress / 100f
+                        workingBitmap?.recycle()
+                        workingBitmap = originalBitmap?.let { applySmooth(it, s) }
+                        imageView.setImageBitmap(workingBitmap)
+                    },
+                    { final ->
+                        val s = final / 100f
+                        originalBitmap = originalBitmap?.let { applySmooth(it, s) }
+                        applyCurrentFilter()
+                    }
+                )
             }
             RetouchOption.CLARITY -> {
-                originalBitmap = originalBitmap?.let { applyClarity(it) }
-                applyCurrentFilter()
+                // slider for clarity
+                showSliderDialog(R.string.retouch_clarity, 12,
+                    { progress ->
+                        val amt = progress / 100f
+                        workingBitmap?.recycle()
+                        workingBitmap = originalBitmap?.let { applyClarity(it, amt) }
+                        imageView.setImageBitmap(workingBitmap)
+                    },
+                    { final ->
+                        val amt = final / 100f
+                        originalBitmap = originalBitmap?.let { applyClarity(it, amt) }
+                        applyCurrentFilter()
+                    }
+                )
             }
             RetouchOption.ROTATE -> {
                 originalBitmap = originalBitmap?.let { rotateBitmap(it, 90f) }
@@ -390,6 +419,41 @@ class PhotoEditActivity : AppCompatActivity() {
             RetouchOption.AUTO -> {
                 // alias to enhance
                 originalBitmap = originalBitmap?.let { applyEnhance(it) }
+                applyCurrentFilter()
+            }
+            // Preset/photo-style quick options
+            RetouchOption.PRESET_NATURAL -> {
+                // Natural: slight enhance, gentle saturation
+                originalBitmap = originalBitmap?.let { applyEnhance(it) }
+                originalBitmap = originalBitmap?.let { applySaturationImmutable(it, 1.05f) }
+                applyCurrentFilter()
+            }
+            RetouchOption.PRESET_SOFT_GLOW -> {
+                // Soft Glow: smooth skin, slight brighten, soft saturation
+                originalBitmap = originalBitmap?.let { applySmooth(it, 0.55f) }
+                originalBitmap = originalBitmap?.let { applyExposure(it, 0.2f) }
+                originalBitmap = originalBitmap?.let { applySaturationImmutable(it, 1.08f) }
+                applyCurrentFilter()
+            }
+            RetouchOption.PRESET_GLAM -> {
+                // Glam: sharpen + contrast + saturation
+                originalBitmap = originalBitmap?.let { applySharpen(it) }
+                originalBitmap = originalBitmap?.let { applyContrast(it, 1.08f) }
+                originalBitmap = originalBitmap?.let { applySaturationImmutable(it, 1.12f) }
+                applyCurrentFilter()
+            }
+            RetouchOption.PRESET_CLEAR_SKIN -> {
+                // Clear Skin: smoothing + clarity + brighten a bit
+                originalBitmap = originalBitmap?.let { applySmooth(it, 0.75f) }
+                originalBitmap = originalBitmap?.let { applyClarity(it) }
+                originalBitmap = originalBitmap?.let { applyExposure(it, 0.1f) }
+                applyCurrentFilter()
+            }
+            RetouchOption.PRESET_ALL_IN_ONE -> {
+                // All-in-One: combine gentle enhance, sharpen and mild vignette
+                originalBitmap = originalBitmap?.let { applyEnhance(it) }
+                originalBitmap = originalBitmap?.let { applySharpen(it) }
+                originalBitmap = originalBitmap?.let { applyVignette(it, 0.08f) }
                 applyCurrentFilter()
             }
         }
@@ -506,42 +570,91 @@ class PhotoEditActivity : AppCompatActivity() {
         return result
     }
 
-    private fun applySmooth(src: Bitmap): Bitmap {
-        // placeholder: slight desaturation + blur-like effect via scaled draw
-        val small = Bitmap.createScaledBitmap(src, src.width/2, src.height/2, true)
-        val result = createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(result)
-        canvas.drawBitmap(Bitmap.createScaledBitmap(small, src.width, src.height, true), 0f, 0f, null)
-        small.recycle()
-        return result
-    }
-
-    private fun applyClarity(src: Bitmap): Bitmap {
-        // clarity ~ midtone contrast boost -> simple contrast increase
-        return applyContrast(src, 1.08f)
-    }
-
-    private fun rotateBitmap(src: Bitmap, degrees: Float): Bitmap {
-        val matrix = Matrix().apply { postRotate(degrees) }
-        val out = Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
-        src.recycle()
-        return out
-    }
-
-    private fun flipBitmap(src: Bitmap): Bitmap {
-        val matrix = Matrix().apply { preScale(-1f, 1f) }
-        val out = Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
-        src.recycle()
-        return out
-    }
-
+    // Apply a ColorMatrix to a bitmap and return a new bitmap. Do not recycle the source here.
     private fun applyColorMatrix(src: Bitmap, cm: ColorMatrix): Bitmap {
         val result = createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(result)
         val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(cm); isFilterBitmap = true }
         canvas.drawBitmap(src, 0f, 0f, paint)
-        src.recycle()
         return result
+    }
+
+    // Rotate a bitmap and return a new instance; caller is responsible for recycling originals where appropriate
+    private fun rotateBitmap(src: Bitmap, degrees: Float): Bitmap {
+        val matrix = Matrix().apply { postRotate(degrees) }
+        return Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+    }
+
+    // Flip horizontally
+    private fun flipBitmap(src: Bitmap): Bitmap {
+        val matrix = Matrix().apply { preScale(-1f, 1f) }
+        return Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+    }
+
+    // Fast box-blur via downscale/upscale (cheap blur for preview)
+    private fun fastBlur(src: Bitmap, downscaleFactor: Float = 0.25f): Bitmap {
+        try {
+            val smallW = (src.width * downscaleFactor).toInt().coerceAtLeast(1)
+            val smallH = (src.height * downscaleFactor).toInt().coerceAtLeast(1)
+            val small = Bitmap.createScaledBitmap(src, smallW, smallH, true)
+            val blurred = Bitmap.createScaledBitmap(small, src.width, src.height, true)
+            small.recycle()
+            return blurred
+        } catch (_: Exception) {
+            return src.copy(src.config ?: Bitmap.Config.ARGB_8888, true)
+        }
+    }
+
+    // Smooth with strength 0..1 (0 = no change, 1 = full blur overlay)
+    private fun applySmooth(src: Bitmap, strength: Float): Bitmap {
+        val clamped = strength.coerceIn(0f, 1f)
+        if (clamped <= 0f) return src.copy(src.config ?: Bitmap.Config.ARGB_8888, true)
+        val blurred = fastBlur(src, 0.25f)
+        val result = createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        canvas.drawBitmap(src, 0f, 0f, null)
+        val paint = Paint().apply { alpha = (clamped * 255).toInt().coerceIn(0, 255) }
+        canvas.drawBitmap(blurred, 0f, 0f, paint)
+        blurred.recycle()
+        return result
+    }
+
+    // Unsharp mask style sharpen: amount 0..1
+    private fun applySharpen(src: Bitmap, amount: Float): Bitmap {
+        val a = amount.coerceIn(0f, 1f)
+        if (a <= 0f) return src.copy(src.config ?: Bitmap.Config.ARGB_8888, true)
+        val blurred = fastBlur(src, 0.33f)
+        val w = src.width
+        val h = src.height
+        val srcPixels = IntArray(w * h)
+        val blurPixels = IntArray(w * h)
+        src.getPixels(srcPixels, 0, w, 0, 0, w, h)
+        blurred.getPixels(blurPixels, 0, w, 0, 0, w, h)
+        val out = IntArray(w * h)
+        for (i in 0 until w * h) {
+            val sp = srcPixels[i]
+            val bp = blurPixels[i]
+            val sr = (sp shr 16) and 0xff
+            val sg = (sp shr 8) and 0xff
+            val sb = sp and 0xff
+            val br = (bp shr 16) and 0xff
+            val bg = (bp shr 8) and 0xff
+            val bb = bp and 0xff
+            val r = (sr + (sr - br) * a).toInt().coerceIn(0, 255)
+            val g = (sg + (sg - bg) * a).toInt().coerceIn(0, 255)
+            val b = (sb + (sb - bb) * a).toInt().coerceIn(0, 255)
+            out[i] = (0xff shl 24) or (r shl 16) or (g shl 8) or b
+        }
+        blurred.recycle()
+        val result = createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        result.setPixels(out, 0, w, 0, 0, w, h)
+        return result
+    }
+
+    // Clarity: midtone contrast boost with adjustable amount 0..1
+    private fun applyClarity(src: Bitmap, amount: Float = 0.12f): Bitmap {
+        val a = (1f + (amount.coerceIn(0f, 1f) * 0.15f)) // small contrast multiplier
+        return applyContrast(src, a)
     }
 
     private fun saveEditedImage() {
@@ -551,27 +664,61 @@ class PhotoEditActivity : AppCompatActivity() {
 
         try {
             if (replaceOriginal) {
-                // Try to overwrite the original file when possible (file:// or absolute path)
+                // Try to overwrite the original file when possible (file:// or content://)
                 val src = sourceImageUri
-                val targetFile = when {
-                    src == null -> null
-                    src.scheme == "file" -> File(src.path ?: "")
-                    else -> {
-                        // if the source was passed as an absolute path string (no scheme) we stored it as file:// earlier
-                        val s = src.path
-                        if (s != null && File(s).exists()) File(s) else null
-                    }
-                }
-                if (targetFile != null) {
+                if (src != null) {
                     try {
-                        FileOutputStream(targetFile).use { bmp.compress(Bitmap.CompressFormat.JPEG, 95, it) }
-                        MediaScannerConnection.scanFile(this, arrayOf(targetFile.absolutePath), null, null)
-                        val intent = Intent(this, PhotoPreviewActivity::class.java).apply {
-                            putExtra(PhotoPreviewActivity.EXTRA_IMAGE_URI, targetFile.absolutePath)
+                        // If the source is a file URI we can overwrite the file directly
+                        if (src.scheme == "file") {
+                            val targetFile = File(src.path ?: "")
+                            if (targetFile.exists() || targetFile.parentFile?.exists() == true) {
+                                FileOutputStream(targetFile).use { bmp.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+                                MediaScannerConnection.scanFile(this, arrayOf(targetFile.absolutePath), null, null)
+                                val fileUriString = Uri.fromFile(targetFile).toString()
+                                val intent = Intent(this, PhotoPreviewActivity::class.java).apply {
+                                    putExtra(PhotoPreviewActivity.EXTRA_IMAGE_URI, fileUriString)
+                                }
+                                startActivity(intent)
+                                finish()
+                                return
+                            }
                         }
-                        startActivity(intent)
-                        finish()
-                        return
+
+                        // If the source is a content URI, attempt to open an output stream via ContentResolver
+                        if (src.scheme == "content") {
+                            try {
+                                contentResolver.openOutputStream(src)?.use { out ->
+                                    bmp.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                                }
+                                // Notify change and open preview with the original content URI
+                                contentResolver.notifyChange(src, null)
+                                val intent = Intent(this, PhotoPreviewActivity::class.java).apply {
+                                    putExtra(PhotoPreviewActivity.EXTRA_IMAGE_URI, src.toString())
+                                }
+                                startActivity(intent)
+                                finish()
+                                return
+                            } catch (_: Exception) {
+                                // ignore and fall back
+                            }
+                        }
+
+                        // As a last attempt try path-based file overwrite if possible
+                        val path = src.path
+                        if (path != null) {
+                            val possibleFile = File(path)
+                            if (possibleFile.exists()) {
+                                FileOutputStream(possibleFile).use { bmp.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+                                MediaScannerConnection.scanFile(this, arrayOf(possibleFile.absolutePath), null, null)
+                                val fileUriString = Uri.fromFile(possibleFile).toString()
+                                val intent = Intent(this, PhotoPreviewActivity::class.java).apply {
+                                    putExtra(PhotoPreviewActivity.EXTRA_IMAGE_URI, fileUriString)
+                                }
+                                startActivity(intent)
+                                finish()
+                                return
+                            }
+                        }
                     } catch (_: Exception) {
                         // If overwrite fails fall back to saving new file below
                     }

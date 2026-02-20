@@ -13,17 +13,17 @@
         android:id="@+id/topBar"
         android:layout_width="match_parent"
         android:layout_height="72dp"
-        android:background="@drawable/top_bar_background"
         android:orientation="horizontal"
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
+        android:background="@color/pink_accent"
         android:gravity="center_vertical">
 
         <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:background="@drawable/circle_back_bg"
+            android:background="@android:color/transparent"
             android:src="@drawable/ic_arrow_back"
             android:contentDescription="@string/back"
             app:tint="@color/white" />

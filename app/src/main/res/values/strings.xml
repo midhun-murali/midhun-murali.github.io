@@ -64,6 +64,13 @@
     <string name="retouch_smooth">Smooth</string>
     <string name="retouch_clarity">Clarity</string>
 
+    <!-- New preset labels for retouch photo-style mock -->
+    <string name="retouch_preset_natural">Natural</string>
+    <string name="retouch_preset_soft_glow">Soft Glow</string>
+    <string name="retouch_preset_glam">Glam</string>
+    <string name="retouch_preset_clear_skin">Clear Skin</string>
+    <string name="retouch_preset_all_in_one">All-in-One</string>
+
     <!-- Settings strings -->
     <string name="save_original_photo">Replace Original Photo</string>
     <string name="version_placeholder">Version 1.0.0</string>

@@ -37,7 +37,7 @@ class SettingsActivity : AppCompatActivity() {
         val version = try {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
             pInfo.versionName ?: "1.0.0"
-        } catch (e: PackageManager.NameNotFoundException) {
+        } catch (_: PackageManager.NameNotFoundException) {
             "1.0.0"
         }
         versionLabel.text = "Version $version"

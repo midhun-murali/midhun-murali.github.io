@@ -20,5 +20,12 @@ enum class RetouchOption(val nameResId: Int) {
     SHADOWS(R.string.retouch_shadows),
     VIGNETTE(R.string.retouch_vignette),
     SMOOTH(R.string.retouch_smooth),
-    CLARITY(R.string.retouch_clarity)
+    CLARITY(R.string.retouch_clarity),
+
+    // Preset/Photo-style quick options (as shown in provided mock)
+    PRESET_NATURAL(R.string.retouch_preset_natural),
+    PRESET_SOFT_GLOW(R.string.retouch_preset_soft_glow),
+    PRESET_GLAM(R.string.retouch_preset_glam),
+    PRESET_CLEAR_SKIN(R.string.retouch_preset_clear_skin),
+    PRESET_ALL_IN_ONE(R.string.retouch_preset_all_in_one)
 }
