@@ -57,6 +57,8 @@ class PhotoEditActivity : AppCompatActivity() {
     private var workingBitmap: Bitmap? = null
     private var currentFilter: Filter = Filter.ORIGINAL
     private var brightnessValue = 0f // -100 .. +100
+    // store slider progress for retouch options so values persist while editing
+    private val sliderProgress = mutableMapOf<RetouchOption, Int>()
     private var isEffectsMode = true
     private var isRetouchMode = false
     // show all available retouch options
@@ -133,6 +135,20 @@ class PhotoEditActivity : AppCompatActivity() {
         originalBitmap = bitmap
         workingBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         imageView.setImageBitmap(workingBitmap)
+
+        // initialize default slider positions (so values persist when reopening dialogs)
+        sliderProgress.putIfAbsent(RetouchOption.SATURATION, 100)
+        sliderProgress.putIfAbsent(RetouchOption.BRIGHTNESS, (brightnessValue + 100f).toInt())
+        sliderProgress.putIfAbsent(RetouchOption.EXPOSURE, 100)
+        sliderProgress.putIfAbsent(RetouchOption.CONTRAST, 100)
+        sliderProgress.putIfAbsent(RetouchOption.TEMPERATURE, 100)
+        sliderProgress.putIfAbsent(RetouchOption.TINT, 100)
+        sliderProgress.putIfAbsent(RetouchOption.HIGHLIGHTS, 100)
+        sliderProgress.putIfAbsent(RetouchOption.SHADOWS, 100)
+        sliderProgress.putIfAbsent(RetouchOption.VIGNETTE, 0)
+        sliderProgress.putIfAbsent(RetouchOption.SMOOTH, 60)
+        sliderProgress.putIfAbsent(RetouchOption.SHARPEN, 35)
+        sliderProgress.putIfAbsent(RetouchOption.CLARITY, 12)
 
         setupFilters()
 
@@ -277,135 +293,170 @@ class PhotoEditActivity : AppCompatActivity() {
                 applyCurrentFilter()
             }
             RetouchOption.SHARPEN -> {
-                // show slider for sharpen amount (0..100 -> 0..1)
-                showSliderDialog(R.string.retouch_sharpen, 35,
+                val init = sliderProgress.getOrPut(RetouchOption.SHARPEN) { 35 }
+                showSliderDialog(R.string.retouch_sharpen, init,
                     { progress ->
+                        sliderProgress[RetouchOption.SHARPEN] = progress
                         val amt = progress / 100f
                         workingBitmap?.recycle()
                         workingBitmap = originalBitmap?.let { applySharpen(it, amt) }
                         imageView.setImageBitmap(workingBitmap)
                     },
                     { final ->
+                        sliderProgress[RetouchOption.SHARPEN] = final
                         val amt = final / 100f
                         originalBitmap = originalBitmap?.let { applySharpen(it, amt) }
                         applyCurrentFilter()
                     }
                 )
             }
-            RetouchOption.SATURATION -> showSliderDialog(R.string.retouch_saturation, 100,
-                { progress ->
-                    // live preview
-                    val sat = progress / 100f
-                    workingBitmap?.recycle()
-                    workingBitmap = originalBitmap?.let { applySaturationImmutable(it, sat) }
-                    imageView.setImageBitmap(workingBitmap)
-                },
-                { final ->
-                    originalBitmap = originalBitmap?.let { applySaturationImmutable(it, final / 100f) }
-                    applyCurrentFilter()
-                }
-            )
-            RetouchOption.BRIGHTNESS -> showSliderDialog(R.string.retouch_brightness, (brightnessValue + 100f).toInt(),
-                { progress ->
-                    brightnessValue = (progress - 100).toFloat()
-                    applyCurrentFilter()
-                },
-                { _ -> /* committed already applied */ }
-            )
-            RetouchOption.EXPOSURE -> showSliderDialog(R.string.retouch_exposure, 100,
-                { p ->
-                    val exposure = (p - 100) / 50f // -2..+2
-                    workingBitmap?.recycle()
-                    workingBitmap = originalBitmap?.let { applyExposure(it, exposure) }
-                    imageView.setImageBitmap(workingBitmap)
-                },
-                { final -> originalBitmap = originalBitmap?.let { applyExposure(it, (final - 100) / 50f) }; applyCurrentFilter() }
-            )
-            RetouchOption.CONTRAST -> showSliderDialog(R.string.retouch_contrast, 100,
-                { p ->
-                    val c = p / 100f // 0..2
-                    workingBitmap?.recycle()
-                    workingBitmap = originalBitmap?.let { applyContrast(it, c) }
-                    imageView.setImageBitmap(workingBitmap)
-                },
-                { final -> originalBitmap = originalBitmap?.let { applyContrast(it, final / 100f) }; applyCurrentFilter() }
-            )
-            RetouchOption.TEMPERATURE -> showSliderDialog(R.string.retouch_temperature, 100,
-                { p ->
-                    val t = (p - 100) / 50f // -2..+2
-                    workingBitmap?.recycle()
-                    workingBitmap = originalBitmap?.let { applyTemperature(it, t) }
-                    imageView.setImageBitmap(workingBitmap)
-                },
-                { final -> originalBitmap = originalBitmap?.let { applyTemperature(it, (final - 100) / 50f) }; applyCurrentFilter() }
-            )
-            RetouchOption.TINT -> showSliderDialog(R.string.retouch_tint, 100,
-                { p ->
-                    val tt = (p - 100) / 100f
-                    workingBitmap?.recycle()
-                    workingBitmap = originalBitmap?.let { applyTint(it, tt) }
-                    imageView.setImageBitmap(workingBitmap)
-                },
-                { final -> originalBitmap = originalBitmap?.let { applyTint(it, (final - 100) / 100f) }; applyCurrentFilter() }
-            )
-            RetouchOption.HIGHLIGHTS -> showSliderDialog(R.string.retouch_highlights, 100,
-                { p ->
-                    // simple emulate: adjust brightness on highlights by scaling (placeholder)
-                    val f = p / 100f
-                    workingBitmap?.recycle()
-                    workingBitmap = originalBitmap?.let { applyHighlights(it, f) }
-                    imageView.setImageBitmap(workingBitmap)
-                },
-                { final -> originalBitmap = originalBitmap?.let { applyHighlights(it, final / 100f) }; applyCurrentFilter() }
-            )
-            RetouchOption.SHADOWS -> showSliderDialog(R.string.retouch_shadows, 100,
-                { p ->
-                    val f = p / 100f
-                    workingBitmap?.recycle()
-                    workingBitmap = originalBitmap?.let { applyShadows(it, f) }
-                    imageView.setImageBitmap(workingBitmap)
-                },
-                { final -> originalBitmap = originalBitmap?.let { applyShadows(it, final / 100f) }; applyCurrentFilter() }
-            )
-            RetouchOption.VIGNETTE -> showSliderDialog(R.string.retouch_vignette, 0,
-                { p ->
-                    val v = p / 100f
-                    workingBitmap?.recycle()
-                    workingBitmap = originalBitmap?.let { applyVignette(it, v) }
-                    imageView.setImageBitmap(workingBitmap)
-                },
-                { final -> originalBitmap = originalBitmap?.let { applyVignette(it, final / 100f) }; applyCurrentFilter() }
-            )
-            RetouchOption.SMOOTH -> {
-                // slider for smooth strength
-                showSliderDialog(R.string.retouch_smooth, 60,
+            RetouchOption.SATURATION -> {
+                val init = sliderProgress.getOrPut(RetouchOption.SATURATION) { 100 }
+                showSliderDialog(R.string.retouch_saturation, init,
                     { progress ->
+                        sliderProgress[RetouchOption.SATURATION] = progress
+                        val sat = progress / 100f
+                        workingBitmap?.recycle()
+                        workingBitmap = originalBitmap?.let { applySaturationImmutable(it, sat) }
+                        imageView.setImageBitmap(workingBitmap)
+                    },
+                    { final ->
+                        sliderProgress[RetouchOption.SATURATION] = final
+                        originalBitmap = originalBitmap?.let { applySaturationImmutable(it, final / 100f) }
+                        applyCurrentFilter()
+                    }
+                )
+            }
+            RetouchOption.BRIGHTNESS -> {
+                val init = sliderProgress.getOrPut(RetouchOption.BRIGHTNESS) { (brightnessValue + 100f).toInt() }
+                showSliderDialog(R.string.retouch_brightness, init,
+                    { progress ->
+                        sliderProgress[RetouchOption.BRIGHTNESS] = progress
+                        brightnessValue = (progress - 100).toFloat()
+                        applyCurrentFilter()
+                    },
+                    { final ->
+                        sliderProgress[RetouchOption.BRIGHTNESS] = final
+                        brightnessValue = (final - 100).toFloat()
+                        applyCurrentFilter()
+                    }
+                )
+            }
+            RetouchOption.EXPOSURE -> {
+                val init = sliderProgress.getOrPut(RetouchOption.EXPOSURE) { 100 }
+                showSliderDialog(R.string.retouch_exposure, init,
+                    { p ->
+                        sliderProgress[RetouchOption.EXPOSURE] = p
+                        val exposure = (p - 100) / 50f // -2..+2
+                        workingBitmap?.recycle()
+                        workingBitmap = originalBitmap?.let { applyExposure(it, exposure) }
+                        imageView.setImageBitmap(workingBitmap)
+                    },
+                    { final -> sliderProgress[RetouchOption.EXPOSURE] = final; originalBitmap = originalBitmap?.let { applyExposure(it, (final - 100) / 50f) }; applyCurrentFilter() }
+                )
+            }
+            RetouchOption.CONTRAST -> {
+                val init = sliderProgress.getOrPut(RetouchOption.CONTRAST) { 100 }
+                showSliderDialog(R.string.retouch_contrast, init,
+                    { p ->
+                        sliderProgress[RetouchOption.CONTRAST] = p
+                        val c = p / 100f // 0..2
+                        workingBitmap?.recycle()
+                        workingBitmap = originalBitmap?.let { applyContrast(it, c) }
+                        imageView.setImageBitmap(workingBitmap)
+                    },
+                    { final -> sliderProgress[RetouchOption.CONTRAST] = final; originalBitmap = originalBitmap?.let { applyContrast(it, final / 100f) }; applyCurrentFilter() }
+                )
+            }
+            RetouchOption.TEMPERATURE -> {
+                val init = sliderProgress.getOrPut(RetouchOption.TEMPERATURE) { 100 }
+                showSliderDialog(R.string.retouch_temperature, init,
+                    { p ->
+                        sliderProgress[RetouchOption.TEMPERATURE] = p
+                        val t = (p - 100) / 50f // -2..+2
+                        workingBitmap?.recycle()
+                        workingBitmap = originalBitmap?.let { applyTemperature(it, t) }
+                        imageView.setImageBitmap(workingBitmap)
+                    },
+                    { final -> sliderProgress[RetouchOption.TEMPERATURE] = final; originalBitmap = originalBitmap?.let { applyTemperature(it, (final - 100) / 50f) }; applyCurrentFilter() }
+                )
+            }
+            RetouchOption.TINT -> {
+                val init = sliderProgress.getOrPut(RetouchOption.TINT) { 100 }
+                showSliderDialog(R.string.retouch_tint, init,
+                    { p ->
+                        sliderProgress[RetouchOption.TINT] = p
+                        val tt = (p - 100) / 100f
+                        workingBitmap?.recycle()
+                        workingBitmap = originalBitmap?.let { applyTint(it, tt) }
+                        imageView.setImageBitmap(workingBitmap)
+                    },
+                    { final -> sliderProgress[RetouchOption.TINT] = final; originalBitmap = originalBitmap?.let { applyTint(it, (final - 100) / 100f) }; applyCurrentFilter() }
+                )
+            }
+            RetouchOption.HIGHLIGHTS -> {
+                val init = sliderProgress.getOrPut(RetouchOption.HIGHLIGHTS) { 100 }
+                showSliderDialog(R.string.retouch_highlights, init,
+                    { p ->
+                        sliderProgress[RetouchOption.HIGHLIGHTS] = p
+                        val f = p / 100f
+                        workingBitmap?.recycle()
+                        workingBitmap = originalBitmap?.let { applyHighlights(it, f) }
+                        imageView.setImageBitmap(workingBitmap)
+                    },
+                    { final -> sliderProgress[RetouchOption.HIGHLIGHTS] = final; originalBitmap = originalBitmap?.let { applyHighlights(it, final / 100f) }; applyCurrentFilter() }
+                )
+            }
+            RetouchOption.SHADOWS -> {
+                val init = sliderProgress.getOrPut(RetouchOption.SHADOWS) { 100 }
+                showSliderDialog(R.string.retouch_shadows, init,
+                    { p ->
+                        sliderProgress[RetouchOption.SHADOWS] = p
+                        val f = p / 100f
+                        workingBitmap?.recycle()
+                        workingBitmap = originalBitmap?.let { applyShadows(it, f) }
+                        imageView.setImageBitmap(workingBitmap)
+                    },
+                    { final -> sliderProgress[RetouchOption.SHADOWS] = final; originalBitmap = originalBitmap?.let { applyShadows(it, final / 100f) }; applyCurrentFilter() }
+                )
+            }
+            RetouchOption.VIGNETTE -> {
+                val init = sliderProgress.getOrPut(RetouchOption.VIGNETTE) { 0 }
+                showSliderDialog(R.string.retouch_vignette, init,
+                    { p ->
+                        sliderProgress[RetouchOption.VIGNETTE] = p
+                        val v = p / 100f
+                        workingBitmap?.recycle()
+                        workingBitmap = originalBitmap?.let { applyVignette(it, v) }
+                        imageView.setImageBitmap(workingBitmap)
+                    },
+                    { final -> sliderProgress[RetouchOption.VIGNETTE] = final; originalBitmap = originalBitmap?.let { applyVignette(it, final / 100f) }; applyCurrentFilter() }
+                )
+            }
+            RetouchOption.SMOOTH -> {
+                val init = sliderProgress.getOrPut(RetouchOption.SMOOTH) { 60 }
+                showSliderDialog(R.string.retouch_smooth, init,
+                    { progress ->
+                        sliderProgress[RetouchOption.SMOOTH] = progress
                         val s = progress / 100f
                         workingBitmap?.recycle()
                         workingBitmap = originalBitmap?.let { applySmooth(it, s) }
                         imageView.setImageBitmap(workingBitmap)
                     },
-                    { final ->
-                        val s = final / 100f
-                        originalBitmap = originalBitmap?.let { applySmooth(it, s) }
-                        applyCurrentFilter()
-                    }
+                    { final -> sliderProgress[RetouchOption.SMOOTH] = final; val s = final / 100f; originalBitmap = originalBitmap?.let { applySmooth(it, s) }; applyCurrentFilter() }
                 )
             }
             RetouchOption.CLARITY -> {
-                // slider for clarity
-                showSliderDialog(R.string.retouch_clarity, 12,
+                val init = sliderProgress.getOrPut(RetouchOption.CLARITY) { 12 }
+                showSliderDialog(R.string.retouch_clarity, init,
                     { progress ->
+                        sliderProgress[RetouchOption.CLARITY] = progress
                         val amt = progress / 100f
                         workingBitmap?.recycle()
                         workingBitmap = originalBitmap?.let { applyClarity(it, amt) }
                         imageView.setImageBitmap(workingBitmap)
                     },
-                    { final ->
-                        val amt = final / 100f
-                        originalBitmap = originalBitmap?.let { applyClarity(it, amt) }
-                        applyCurrentFilter()
-                    }
+                    { final -> sliderProgress[RetouchOption.CLARITY] = final; val amt = final / 100f; originalBitmap = originalBitmap?.let { applyClarity(it, amt) }; applyCurrentFilter() }
                 )
             }
             RetouchOption.ROTATE -> {
@@ -414,46 +465,6 @@ class PhotoEditActivity : AppCompatActivity() {
             }
             RetouchOption.FLIP -> {
                 originalBitmap = originalBitmap?.let { flipBitmap(it) }
-                applyCurrentFilter()
-            }
-            RetouchOption.AUTO -> {
-                // alias to enhance
-                originalBitmap = originalBitmap?.let { applyEnhance(it) }
-                applyCurrentFilter()
-            }
-            // Preset/photo-style quick options
-            RetouchOption.PRESET_NATURAL -> {
-                // Natural: slight enhance, gentle saturation
-                originalBitmap = originalBitmap?.let { applyEnhance(it) }
-                originalBitmap = originalBitmap?.let { applySaturationImmutable(it, 1.05f) }
-                applyCurrentFilter()
-            }
-            RetouchOption.PRESET_SOFT_GLOW -> {
-                // Soft Glow: smooth skin, slight brighten, soft saturation
-                originalBitmap = originalBitmap?.let { applySmooth(it, 0.55f) }
-                originalBitmap = originalBitmap?.let { applyExposure(it, 0.2f) }
-                originalBitmap = originalBitmap?.let { applySaturationImmutable(it, 1.08f) }
-                applyCurrentFilter()
-            }
-            RetouchOption.PRESET_GLAM -> {
-                // Glam: sharpen + contrast + saturation
-                originalBitmap = originalBitmap?.let { applySharpen(it) }
-                originalBitmap = originalBitmap?.let { applyContrast(it, 1.08f) }
-                originalBitmap = originalBitmap?.let { applySaturationImmutable(it, 1.12f) }
-                applyCurrentFilter()
-            }
-            RetouchOption.PRESET_CLEAR_SKIN -> {
-                // Clear Skin: smoothing + clarity + brighten a bit
-                originalBitmap = originalBitmap?.let { applySmooth(it, 0.75f) }
-                originalBitmap = originalBitmap?.let { applyClarity(it) }
-                originalBitmap = originalBitmap?.let { applyExposure(it, 0.1f) }
-                applyCurrentFilter()
-            }
-            RetouchOption.PRESET_ALL_IN_ONE -> {
-                // All-in-One: combine gentle enhance, sharpen and mild vignette
-                originalBitmap = originalBitmap?.let { applyEnhance(it) }
-                originalBitmap = originalBitmap?.let { applySharpen(it) }
-                originalBitmap = originalBitmap?.let { applyVignette(it, 0.08f) }
                 applyCurrentFilter()
             }
         }
@@ -838,5 +849,20 @@ class PhotoEditActivity : AppCompatActivity() {
         } catch (_: Exception) {
             // ignore
         }
+    }
+
+    override fun onSaveInstanceState(outState: android.os.Bundle) {
+        super.onSaveInstanceState(outState)
+        // save sliderProgress as two parallel int arrays (enum ordinal -> value)
+        val keys = IntArray(sliderProgress.size)
+        val vals = IntArray(sliderProgress.size)
+        var idx = 0
+        for ((k, v) in sliderProgress) {
+            keys[idx] = k.ordinal
+            vals[idx] = v
+            idx++
+        }
+        outState.putIntArray("slider_keys", keys)
+        outState.putIntArray("slider_vals", vals)
     }
 }
