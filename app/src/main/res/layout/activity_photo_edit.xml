@@ -153,8 +153,8 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="@color/white"
-        android:paddingTop="16dp"
-        android:paddingBottom="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
         android:clipToPadding="false"
         app:layout_constraintBottom_toTopOf="@+id/adView"
         app:layout_constraintStart_toStartOf="parent"
@@ -166,7 +166,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:padding="12dp"
         android:background="@drawable/bottom_bar_background"
         android:gravity="center_vertical"
         android:elevation="4dp"
@@ -183,16 +183,16 @@
 
             <!-- Outer Ring -->
             <ImageView
-                android:layout_width="88dp"
-                android:layout_height="88dp"
+                android:layout_width="66dp"
+                android:layout_height="66dp"
                 android:src="@drawable/shutter_button_outer"
                 android:layout_gravity="center" />
 
             <!-- Inner Button -->
             <ImageButton
                 android:id="@+id/captureButton"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
                 android:src="@drawable/ic_check"
                 android:background="@drawable/shutter_button_background"
                 android:contentDescription="@string/capture_photo"

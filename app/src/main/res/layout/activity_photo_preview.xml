@@ -50,7 +50,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:padding="12dp"
         android:gravity="center"
         android:background="@drawable/bottom_bar_background"
         app:layout_constraintBottom_toBottomOf="parent"
