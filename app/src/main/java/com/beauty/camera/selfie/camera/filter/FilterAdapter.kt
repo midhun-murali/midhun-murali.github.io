@@ -7,6 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import java.util.Locale
 
 class FilterAdapter(
     private val filters: List<Filter>,
@@ -14,6 +15,8 @@ class FilterAdapter(
 ) : RecyclerView.Adapter<FilterAdapter.FilterViewHolder>() {
 
     private var selectedPosition = 0
+    // Lazily computed thumbnail resource ids cached per filter
+    private val thumbResByFilter: MutableMap<Filter, Int> = mutableMapOf()
 
     class FilterViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val filterThumbnail: ImageView = itemView.findViewById(R.id.filterThumbnail)
@@ -31,22 +34,28 @@ class FilterAdapter(
         val filter = filters[position]
         holder.filterName.text = holder.itemView.context.getString(filter.nameResId)
 
-        // Map filter enum to drawable thumbnails (simple vector indicators)
-        val thumbRes = when (filter) {
-            Filter.PASTEL -> R.drawable.ic_filter_pastel
-            Filter.BLOOM -> R.drawable.ic_filter_bloom
-            Filter.VINTAGE -> R.drawable.ic_filter_vintage
-            Filter.MONO -> R.drawable.ic_filter_mono
-            // use new thumb resources for new filters
-            Filter.SEPIA -> R.drawable.ic_filter_sepia
-            Filter.VIBRANT -> R.drawable.ic_filter_vibrant
-            Filter.CINEMATIC -> R.drawable.ic_filter_cinematic
-            Filter.COOL -> R.drawable.ic_filter_cool
-            Filter.WARM -> R.drawable.ic_filter_warm
-            Filter.FADE -> R.drawable.ic_filter_fade
-            else -> R.drawable.ic_filter_pastel
+        val ctx = holder.itemView.context
+
+        // Look up cached id first
+        var thumbResId = thumbResByFilter[filter] ?: 0
+        if (thumbResId == 0) {
+            // Try to load a drawable resource that matches the filter name (e.g., "pastel", "sepia").
+            // If not present, fall back to prefixed ic_filter_* drawable names, and finally to a default.
+            val baseName = filter.name.lowercase(Locale.US)
+            thumbResId = ctx.resources.getIdentifier(baseName, "drawable", ctx.packageName)
+
+            if (thumbResId == 0) {
+                thumbResId = when (filter) {
+                    Filter.BLOOM -> R.drawable.ic_filter_bloom
+                    Filter.WARM -> R.drawable.ic_filter_warm
+                    Filter.FADE -> R.drawable.ic_filter_fade
+                    else -> R.drawable.ic_filter_bloom
+                }
+            }
+            thumbResByFilter[filter] = thumbResId
         }
-        holder.filterThumbnail.setImageDrawable(ContextCompat.getDrawable(holder.itemView.context, thumbRes))
+
+        holder.filterThumbnail.setImageDrawable(ContextCompat.getDrawable(holder.itemView.context, thumbResId))
 
         val isSelected = position == selectedPosition
         holder.filterContainer.background = if (isSelected) {
