@@ -33,7 +33,6 @@ class FilterAdapter(
 
         // Map filter enum to drawable thumbnails (simple vector indicators)
         val thumbRes = when (filter) {
-            Filter.SWEET -> R.drawable.ic_filter_sweet
             Filter.PASTEL -> R.drawable.ic_filter_pastel
             Filter.BLOOM -> R.drawable.ic_filter_bloom
             Filter.VINTAGE -> R.drawable.ic_filter_vintage
@@ -45,7 +44,7 @@ class FilterAdapter(
             Filter.COOL -> R.drawable.ic_filter_cool
             Filter.WARM -> R.drawable.ic_filter_warm
             Filter.FADE -> R.drawable.ic_filter_fade
-            else -> R.drawable.ic_filter_sweet
+            else -> R.drawable.ic_filter_pastel
         }
         holder.filterThumbnail.setImageDrawable(ContextCompat.getDrawable(holder.itemView.context, thumbRes))
 

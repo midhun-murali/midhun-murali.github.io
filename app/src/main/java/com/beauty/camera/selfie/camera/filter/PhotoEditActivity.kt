@@ -190,7 +190,6 @@ class PhotoEditActivity : AppCompatActivity() {
     private fun showFilters() {
         val filters = listOf(
             Filter.ORIGINAL,
-            Filter.SWEET,
             Filter.PASTEL,
             Filter.BLOOM,
             Filter.VINTAGE,

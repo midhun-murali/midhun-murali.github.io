@@ -92,7 +92,8 @@ class MainActivity : AppCompatActivity() {
     // default to ORIGINAL filter (no change applied)
     private var currentFilter = Filter.ORIGINAL
     private var isTorchOn = false
-    private var lensFacing = CameraSelector.LENS_FACING_BACK
+    // Start with front camera by default
+    private var lensFacing = CameraSelector.LENS_FACING_FRONT
     private var flashMode = ImageCapture.FLASH_MODE_OFF
 
     // New states
@@ -102,7 +103,6 @@ class MainActivity : AppCompatActivity() {
     // include ORIGINAL as the first/default filter
     private val filters = listOf(
         Filter.ORIGINAL,
-        Filter.SWEET,
         Filter.PASTEL,
         Filter.BLOOM,
         Filter.VINTAGE,
@@ -341,367 +341,380 @@ class MainActivity : AppCompatActivity() {
                 .build()
             try {
                 cameraProvider.unbindAll()
-                val cameraSelector = CameraSelector.Builder()
-                    .requireLensFacing(lensFacing)
-                    .build()
-                // Bind and keep reference to the Camera so we can toggle torch
-                camera = cameraProvider.bindToLifecycle(
-                    this,
-                    cameraSelector,
-                    preview,
-                    imageCapture
-                )
-                // Reset torch and flash mode when switching cameras
-                isTorchOn = false
-                flashMode = ImageCapture.FLASH_MODE_OFF
-                imageCapture?.flashMode = flashMode
-                updateFlashButton()
-                applyFilterToPreview()
-            } catch (exc: Exception) {
-                Log.e(TAG, "Failed to bind camera use cases", exc)
-                Toast.makeText(this, R.string.take_photo_error, Toast.LENGTH_SHORT).show()
-            }
-        }, ContextCompat.getMainExecutor(this))
-    }
-
-    private fun applyFilterToPreview() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (currentFilter == Filter.ORIGINAL && !isHdrEnabled) {
-                previewView.setRenderEffect(null)
-            } else {
-                // Combine the selected color matrix with optional HDR boost
-                val baseMatrix = currentFilter.matrix()
-                if (isHdrEnabled) {
-                    // Simulate HDR by increasing contrast and saturation slightly
-                    val hdrMatrix = ColorMatrix().apply {
-                        set(floatArrayOf(
-                            1.08f, 0f, 0f, 0f, 6f,
-                            0f, 1.08f, 0f, 0f, 6f,
-                            0f, 0f, 1.08f, 0f, 6f,
-                            0f, 0f, 0f, 1f, 0f
-                        ))
-                    }
-                    baseMatrix.postConcat(hdrMatrix)
-                }
-                val renderEffect = RenderEffect.createColorFilterEffect(
-                    ColorMatrixColorFilter(baseMatrix)
-                )
-                previewView.setRenderEffect(renderEffect)
-            }
-        } else {
-            // Pre-Android 12 fallback: apply the color matrix via a layer paint on the PreviewView
-            if (currentFilter == Filter.ORIGINAL && !isHdrEnabled) {
-                previewView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-            } else {
-                val matrix = currentFilter.matrix()
-                if (isHdrEnabled) {
-                    val hdrMatrix = ColorMatrix().apply {
-                        set(floatArrayOf(
-                            1.08f, 0f, 0f, 0f, 6f,
-                            0f, 1.08f, 0f, 0f, 6f,
-                            0f, 0f, 1.08f, 0f, 6f,
-                            0f, 0f, 0f, 1f, 0f
-                        ))
-                    }
-                    matrix.postConcat(hdrMatrix)
-                }
-                val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(matrix) }
-                previewView.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
-            }
-        }
-    }
-
-    // Apply ColorMatrix filter to the gallery overlay ImageView
-    private fun applyFilterToGalleryOverlay() {
-        val matrix = currentFilter.matrix()
-        if (isHdrEnabled) {
-            val hdrMatrix = ColorMatrix().apply {
-                set(floatArrayOf(
-                    1.08f, 0f, 0f, 0f, 6f,
-                    0f, 1.08f, 0f, 0f, 6f,
-                    0f, 0f, 1.08f, 0f, 6f,
-                    0f, 0f, 0f, 1f, 0f
-                ))
-            }
-            matrix.postConcat(hdrMatrix)
-        }
-        val cf = if (currentFilter == Filter.ORIGINAL && !isHdrEnabled) null else ColorMatrixColorFilter(matrix)
-        galleryImageOverlay.colorFilter = cf
-    }
-
-    private fun showGalleryBitmap(bitmap: Bitmap) {
-        // recycle previous bitmap if present
-        currentGalleryBitmap?.recycle()
-        currentGalleryBitmap = bitmap
-        galleryImageOverlay.setImageBitmap(bitmap)
-        galleryImageOverlay.visibility = View.VISIBLE
-        closeGalleryButton.visibility = View.VISIBLE
-        applyFilterToGalleryOverlay()
-    }
-
-    private fun hideGalleryOverlay() {
-        galleryImageOverlay.visibility = View.GONE
-        closeGalleryButton.visibility = View.GONE
-        // clear image and recycle
-        galleryImageOverlay.setImageDrawable(null)
-        currentGalleryBitmap?.recycle()
-        currentGalleryBitmap = null
-        // restore preview filter
-        applyFilterToPreview()
-    }
-
-    private fun takePhoto() {
-        val capture = imageCapture ?: return
-        val photoFile = createImageFile()
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-
-        capture.takePicture(outputOptions, cameraExecutor, object : ImageCapture.OnImageSavedCallback {
-            override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                // If HDR is enabled or filter is applied, we need to post-process saved file
-                if (isHdrEnabled || currentFilter != Filter.ORIGINAL) {
-                    // apply filter on a background thread then save
-                    try {
-                        // Read EXIF from the file first so we can orient pixels correctly
-                        val exif = try { ExifInterface(photoFile.absolutePath) } catch (_: Exception) { null }
-                        val original = BitmapFactory.decodeFile(photoFile.absolutePath) ?: run {
-                            runOnUiThread {
-                                Toast.makeText(this@MainActivity, R.string.take_photo_error, Toast.LENGTH_SHORT).show()
-                            }
-                            return
+                // Build a selector for the preferred lensFacing and fallback if not available
+                var cameraSelector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
+                if (!cameraProvider.hasCamera(cameraSelector)) {
+                    val altFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK
+                    val altSelector = CameraSelector.Builder().requireLensFacing(altFacing).build()
+                    if (cameraProvider.hasCamera(altSelector)) {
+                        lensFacing = altFacing
+                        cameraSelector = altSelector
+                    } else {
+                        // No suitable camera available
+                        runOnUiThread {
+                            Toast.makeText(this, R.string.take_photo_error, Toast.LENGTH_SHORT).show()
                         }
-                        // Rotate the decoded bitmap according to EXIF so the filtered result keeps correct orientation
-                        val oriented = rotateBitmapByExif(original, exif)
-                        val filtered = createFilteredBitmapForSave(oriented ?: original)
-                        FileOutputStream(photoFile).use { filtered.compress(Bitmap.CompressFormat.JPEG, 95, it) }
-                        // recycle bitmaps
-                        if (oriented !== original && !original.isRecycled) original.recycle()
-                        if (!filtered.isRecycled) filtered.recycle()
-                        // Ensure saved file has NORMAL orientation tag since we've applied rotation in-memory
-                        try {
-                            val newExif = ExifInterface(photoFile.absolutePath)
-                            newExif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
-                            newExif.saveAttributes()
-                        } catch (_: Exception) { /* ignore */ }
-                        MediaScannerConnection.scanFile(this@MainActivity, arrayOf(photoFile.absolutePath), null, null)
-                     } catch (_: Exception) {
-                         Log.e(TAG, "Error post-processing saved image", null)
+                        return@addListener
+                    }
+                }
+                 // Bind and keep reference to the Camera so we can toggle torch
+                 camera = cameraProvider.bindToLifecycle(
+                     this,
+                     cameraSelector,
+                     preview,
+                     imageCapture
+                 )
+                 // Reset torch and flash mode when switching cameras
+                 isTorchOn = false
+                 flashMode = ImageCapture.FLASH_MODE_OFF
+                 imageCapture?.flashMode = flashMode
+                 updateFlashButton()
+                 applyFilterToPreview()
+             } catch (exc: Exception) {
+                 Log.e(TAG, "Failed to bind camera use cases", exc)
+                 Toast.makeText(this, R.string.take_photo_error, Toast.LENGTH_SHORT).show()
+             }
+         }, ContextCompat.getMainExecutor(this))
+     }
+
+     private fun applyFilterToPreview() {
+         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+             if (currentFilter == Filter.ORIGINAL && !isHdrEnabled) {
+                 previewView.setRenderEffect(null)
+             } else {
+                 // Combine the selected color matrix with optional HDR boost
+                 val baseMatrix = currentFilter.matrix()
+                 if (isHdrEnabled) {
+                     // Simulate HDR by increasing contrast and saturation slightly
+                     val hdrMatrix = ColorMatrix().apply {
+                         set(floatArrayOf(
+                             1.08f, 0f, 0f, 0f, 6f,
+                             0f, 1.08f, 0f, 0f, 6f,
+                             0f, 0f, 1.08f, 0f, 6f,
+                             0f, 0f, 0f, 1f, 0f
+                         ))
+                     }
+                     baseMatrix.postConcat(hdrMatrix)
+                 }
+                 val renderEffect = RenderEffect.createColorFilterEffect(
+                     ColorMatrixColorFilter(baseMatrix)
+                 )
+                 previewView.setRenderEffect(renderEffect)
+             }
+         } else {
+             // Pre-Android 12 fallback: apply the color matrix via a layer paint on the PreviewView
+             if (currentFilter == Filter.ORIGINAL && !isHdrEnabled) {
+                 previewView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+             } else {
+                 val matrix = currentFilter.matrix()
+                 if (isHdrEnabled) {
+                     val hdrMatrix = ColorMatrix().apply {
+                         set(floatArrayOf(
+                             1.08f, 0f, 0f, 0f, 6f,
+                             0f, 1.08f, 0f, 0f, 6f,
+                             0f, 0f, 1.08f, 0f, 6f,
+                             0f, 0f, 0f, 1f, 0f
+                         ))
+                     }
+                     matrix.postConcat(hdrMatrix)
+                 }
+                 val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(matrix) }
+                 previewView.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
+             }
+         }
+     }
+
+     // Apply ColorMatrix filter to the gallery overlay ImageView
+     private fun applyFilterToGalleryOverlay() {
+         val matrix = currentFilter.matrix()
+         if (isHdrEnabled) {
+             val hdrMatrix = ColorMatrix().apply {
+                 set(floatArrayOf(
+                     1.08f, 0f, 0f, 0f, 6f,
+                     0f, 1.08f, 0f, 0f, 6f,
+                     0f, 0f, 1.08f, 0f, 6f,
+                     0f, 0f, 0f, 1f, 0f
+                 ))
+             }
+             matrix.postConcat(hdrMatrix)
+         }
+         val cf = if (currentFilter == Filter.ORIGINAL && !isHdrEnabled) null else ColorMatrixColorFilter(matrix)
+         galleryImageOverlay.colorFilter = cf
+     }
+
+     private fun showGalleryBitmap(bitmap: Bitmap) {
+         // recycle previous bitmap if present
+         currentGalleryBitmap?.recycle()
+         currentGalleryBitmap = bitmap
+         galleryImageOverlay.setImageBitmap(bitmap)
+         galleryImageOverlay.visibility = View.VISIBLE
+         closeGalleryButton.visibility = View.VISIBLE
+         applyFilterToGalleryOverlay()
+     }
+
+     private fun hideGalleryOverlay() {
+         galleryImageOverlay.visibility = View.GONE
+         closeGalleryButton.visibility = View.GONE
+         // clear image and recycle
+         galleryImageOverlay.setImageDrawable(null)
+         currentGalleryBitmap?.recycle()
+         currentGalleryBitmap = null
+         // restore preview filter
+         applyFilterToPreview()
+     }
+
+     private fun takePhoto() {
+         val capture = imageCapture ?: return
+         val photoFile = createImageFile()
+         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+
+         capture.takePicture(outputOptions, cameraExecutor, object : ImageCapture.OnImageSavedCallback {
+             override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                 // If HDR is enabled or filter is applied, we need to post-process saved file
+                 if (isHdrEnabled || currentFilter != Filter.ORIGINAL) {
+                     // apply filter on a background thread then save
+                     try {
+                         // Read EXIF from the file first so we can orient pixels correctly
+                         val exif = try { ExifInterface(photoFile.absolutePath) } catch (_: Exception) { null }
+                         val original = BitmapFactory.decodeFile(photoFile.absolutePath) ?: run {
+                             runOnUiThread {
+                                 Toast.makeText(this@MainActivity, R.string.take_photo_error, Toast.LENGTH_SHORT).show()
+                             }
+                             return
+                         }
+                         // Rotate the decoded bitmap according to EXIF so the filtered result keeps correct orientation
+                         val oriented = rotateBitmapByExif(original, exif)
+                         val filtered = createFilteredBitmapForSave(oriented ?: original)
+                         FileOutputStream(photoFile).use { filtered.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+                         // recycle bitmaps
+                         if (oriented !== original && !original.isRecycled) original.recycle()
+                         if (!filtered.isRecycled) filtered.recycle()
+                         // Ensure saved file has NORMAL orientation tag since we've applied rotation in-memory
+                         try {
+                             val newExif = ExifInterface(photoFile.absolutePath)
+                             newExif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+                             newExif.saveAttributes()
+                         } catch (_: Exception) { /* ignore */ }
+                         MediaScannerConnection.scanFile(this@MainActivity, arrayOf(photoFile.absolutePath), null, null)
+                      } catch (_: Exception) {
+                          Log.e(TAG, "Error post-processing saved image", null)
+                      }
+                  }
+
+                 // Normalize orientation for the saved file so editor/preview show upright image
+                 try {
+                     normalizeJpegOrientation(photoFile)
+                 } catch (e: Exception) {
+                     Log.w(TAG, "Failed to normalize orientation", e)
+                 }
+                 runOnUiThread {
+                     try {
+                         val intent = Intent(this@MainActivity, PhotoEditActivity::class.java).apply {
+                             putExtra(PhotoEditActivity.EXTRA_IMAGE_URI, photoFile.absolutePath)
+                         }
+                         startActivity(intent)
+                     } catch (e: Exception) {
+                         Toast.makeText(this@MainActivity, getString(R.string.photo_saved, photoFile.absolutePath), Toast.LENGTH_SHORT).show()
                      }
                  }
+             }
 
-                // Normalize orientation for the saved file so editor/preview show upright image
-                try {
-                    normalizeJpegOrientation(photoFile)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to normalize orientation", e)
-                }
-                runOnUiThread {
-                    try {
-                        val intent = Intent(this@MainActivity, PhotoEditActivity::class.java).apply {
-                            putExtra(PhotoEditActivity.EXTRA_IMAGE_URI, photoFile.absolutePath)
-                        }
-                        startActivity(intent)
-                    } catch (e: Exception) {
-                        Toast.makeText(this@MainActivity, getString(R.string.photo_saved, photoFile.absolutePath), Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
+             override fun onError(exception: ImageCaptureException) {
+                 Log.e(TAG, "Photo capture failed", exception)
+                 runOnUiThread {
+                     Toast.makeText(this@MainActivity, R.string.take_photo_error, Toast.LENGTH_SHORT).show()
+                 }
+             }
+         })
+     }
 
-            override fun onError(exception: ImageCaptureException) {
-                Log.e(TAG, "Photo capture failed", exception)
-                runOnUiThread {
-                    Toast.makeText(this@MainActivity, R.string.take_photo_error, Toast.LENGTH_SHORT).show()
-                }
-            }
-        })
-    }
+     private fun createFilteredBitmapForSave(source: Bitmap): Bitmap {
+         // apply current filter and HDR matrix
+         val result = createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+         val matrix = currentFilter.matrix()
+         if (isHdrEnabled) {
+             val hdrMatrix = ColorMatrix().apply {
+                 set(floatArrayOf(
+                     1.08f, 0f, 0f, 0f, 6f,
+                     0f, 1.08f, 0f, 0f, 6f,
+                     0f, 0f, 1.08f, 0f, 6f,
+                     0f, 0f, 0f, 1f, 0f
+                 ))
+             }
+             matrix.postConcat(hdrMatrix)
+         }
+         val paint = Paint().apply {
+             colorFilter = ColorMatrixColorFilter(matrix)
+             isFilterBitmap = true
+         }
+         Canvas(result).drawBitmap(source, 0f, 0f, paint)
+         return result
+     }
 
-    private fun createFilteredBitmapForSave(source: Bitmap): Bitmap {
-        // apply current filter and HDR matrix
-        val result = createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
-        val matrix = currentFilter.matrix()
-        if (isHdrEnabled) {
-            val hdrMatrix = ColorMatrix().apply {
-                set(floatArrayOf(
-                    1.08f, 0f, 0f, 0f, 6f,
-                    0f, 1.08f, 0f, 0f, 6f,
-                    0f, 0f, 1.08f, 0f, 6f,
-                    0f, 0f, 0f, 1f, 0f
-                ))
-            }
-            matrix.postConcat(hdrMatrix)
-        }
-        val paint = Paint().apply {
-            colorFilter = ColorMatrixColorFilter(matrix)
-            isFilterBitmap = true
-        }
-        Canvas(result).drawBitmap(source, 0f, 0f, paint)
-        return result
-    }
+     // Rotate a bitmap according to EXIF orientation (returns the rotated bitmap or original on error)
+     private fun rotateBitmapByExif(bitmap: Bitmap?, exif: ExifInterface?): Bitmap? {
+         if (bitmap == null || exif == null) return bitmap
+         val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+         val matrix = Matrix()
+         when (orientation) {
+             ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+             ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+             ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+             ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+             ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+             ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
+             ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
+             else -> { /* normal */ }
+         }
+         return try {
+             if (matrix.isIdentity) bitmap else Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+         } catch (_: Exception) {
+             bitmap
+         }
+     }
 
-    // Rotate a bitmap according to EXIF orientation (returns the rotated bitmap or original on error)
-    private fun rotateBitmapByExif(bitmap: Bitmap?, exif: ExifInterface?): Bitmap? {
-        if (bitmap == null || exif == null) return bitmap
-        val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-        val matrix = Matrix()
-        when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
-            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
-            ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
-            ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
-            else -> { /* normal */ }
-        }
-        return try {
-            if (matrix.isIdentity) bitmap else Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-        } catch (_: Exception) {
-            bitmap
-        }
-    }
+     // Normalize JPEG orientation: rotate pixel data according to EXIF then set orientation tag to NORMAL
+     private fun normalizeJpegOrientation(file: File) {
+         try {
+             val exif = try {
+                 ExifInterface(file.absolutePath)
+             } catch (_: Exception) { null }
+             val orientation = exif?.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+                 ?: ExifInterface.ORIENTATION_NORMAL
+             if (orientation == ExifInterface.ORIENTATION_NORMAL) return
 
-    // Normalize JPEG orientation: rotate pixel data according to EXIF then set orientation tag to NORMAL
-    private fun normalizeJpegOrientation(file: File) {
-        try {
-            val exif = try {
-                ExifInterface(file.absolutePath)
-            } catch (_: Exception) { null }
-            val orientation = exif?.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-                ?: ExifInterface.ORIENTATION_NORMAL
-            if (orientation == ExifInterface.ORIENTATION_NORMAL) return
+             val bmp = BitmapFactory.decodeFile(file.absolutePath) ?: return
+             val matrix = Matrix()
+             when (orientation) {
+                 ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+                 ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+                 ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+                 ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+                 ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+                 ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
+                 ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
+                 else -> { /* normal */ }
+             }
+             val rotated = try { if (matrix.isIdentity) bmp else Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true) } catch (_: Exception) { bmp }
+             FileOutputStream(file).use { rotated.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+             try {
+                 val newExif = ExifInterface(file.absolutePath)
+                 newExif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+                 newExif.saveAttributes()
+             } catch (_: Exception) { /* ignore */ }
+             if (rotated !== bmp && !bmp.isRecycled) bmp.recycle()
+             if (!rotated.isRecycled) rotated.recycle()
+         } catch (e: Exception) {
+             Log.w(TAG, "normalizeJpegOrientation failed", e)
+         }
+     }
 
-            val bmp = BitmapFactory.decodeFile(file.absolutePath) ?: return
-            val matrix = Matrix()
-            when (orientation) {
-                ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-                ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-                ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-                ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
-                ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
-                ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
-                ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
-                else -> { /* normal */ }
-            }
-            val rotated = try { if (matrix.isIdentity) bmp else Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true) } catch (_: Exception) { bmp }
-            FileOutputStream(file).use { rotated.compress(Bitmap.CompressFormat.JPEG, 95, it) }
-            try {
-                val newExif = ExifInterface(file.absolutePath)
-                newExif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
-                newExif.saveAttributes()
-            } catch (_: Exception) { /* ignore */ }
-            if (rotated !== bmp && !bmp.isRecycled) bmp.recycle()
-            if (!rotated.isRecycled) rotated.recycle()
-        } catch (e: Exception) {
-            Log.w(TAG, "normalizeJpegOrientation failed", e)
-        }
-    }
+     private fun loadBitmapFromUri(uri: Uri): Bitmap? {
+         return try {
+             contentResolver.openInputStream(uri)?.use { stream ->
+                 BitmapFactory.decodeStream(stream)
+             }
+         } catch (e: Exception) {
+             Log.e(TAG, "Error loading bitmap from uri", e)
+             null
+         }
+     }
 
-    private fun loadBitmapFromUri(uri: Uri): Bitmap? {
-        return try {
-            contentResolver.openInputStream(uri)?.use { stream ->
-                BitmapFactory.decodeStream(stream)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading bitmap from uri", e)
-            null
-        }
-    }
+     private fun applyFilterToBitmapAndSave(bitmap: Bitmap) {
+         val filtered = createFilteredBitmap(bitmap)
+         val photoFile = createImageFile()
+         FileOutputStream(photoFile).use { filtered.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+         bitmap.recycle()
+         filtered.recycle()
+         try {
+             MediaScannerConnection.scanFile(this, arrayOf(photoFile.absolutePath), null, null)
+         } catch (e: Exception) {
+             Log.e(TAG, "Error scanning saved image", e)
+         }
+         Toast.makeText(this, getString(R.string.photo_saved, photoFile.absolutePath), Toast.LENGTH_SHORT).show()
+     }
 
-    private fun applyFilterToBitmapAndSave(bitmap: Bitmap) {
-        val filtered = createFilteredBitmap(bitmap)
-        val photoFile = createImageFile()
-        FileOutputStream(photoFile).use { filtered.compress(Bitmap.CompressFormat.JPEG, 95, it) }
-        bitmap.recycle()
-        filtered.recycle()
-        try {
-            MediaScannerConnection.scanFile(this, arrayOf(photoFile.absolutePath), null, null)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error scanning saved image", e)
-        }
-        Toast.makeText(this, getString(R.string.photo_saved, photoFile.absolutePath), Toast.LENGTH_SHORT).show()
-    }
+     private fun applyFilterAndSave(file: File) {
+         val original = BitmapFactory.decodeFile(file.absolutePath) ?: return
+         val filtered = createFilteredBitmapForSave(original)
+         FileOutputStream(file).use { filtered.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+         original.recycle()
+         filtered.recycle()
+         try {
+             MediaScannerConnection.scanFile(this, arrayOf(file.absolutePath), null, null)
+         } catch (e: Exception) {
+             Log.e(TAG, "Error scanning saved image", e)
+         }
+     }
 
-    private fun applyFilterAndSave(file: File) {
-        val original = BitmapFactory.decodeFile(file.absolutePath) ?: return
-        val filtered = createFilteredBitmapForSave(original)
-        FileOutputStream(file).use { filtered.compress(Bitmap.CompressFormat.JPEG, 95, it) }
-        original.recycle()
-        filtered.recycle()
-        try {
-            MediaScannerConnection.scanFile(this, arrayOf(file.absolutePath), null, null)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error scanning saved image", e)
-        }
-    }
+     private fun createFilteredBitmap(source: Bitmap): Bitmap {
+         val result = createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+         val paint = Paint().apply {
+             colorFilter = ColorMatrixColorFilter(currentFilter.matrix())
+             isFilterBitmap = true
+         }
+         Canvas(result).drawBitmap(source, 0f, 0f, paint)
+         return result
+     }
 
-    private fun createFilteredBitmap(source: Bitmap): Bitmap {
-        val result = createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
-        val paint = Paint().apply {
-            colorFilter = ColorMatrixColorFilter(currentFilter.matrix())
-            isFilterBitmap = true
-        }
-        Canvas(result).drawBitmap(source, 0f, 0f, paint)
-        return result
-    }
+     private fun createImageFile(): File {
+         val timestamp = SimpleDateFormat(FILENAME_FORMAT, Locale.US).format(Date())
+         return File(outputDirectory, "$timestamp.jpg")
+     }
 
-    private fun createImageFile(): File {
-        val timestamp = SimpleDateFormat(FILENAME_FORMAT, Locale.US).format(Date())
-        return File(outputDirectory, "$timestamp.jpg")
-    }
+     private fun getOutputDirectory(): File {
+         val mediaDir = externalMediaDirs.firstOrNull()?.let {
+             File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
+         }
+         return if (mediaDir != null && mediaDir.exists()) mediaDir else filesDir
+     }
 
-    private fun getOutputDirectory(): File {
-        val mediaDir = externalMediaDirs.firstOrNull()?.let {
-            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
-        }
-        return if (mediaDir != null && mediaDir.exists()) mediaDir else filesDir
-    }
+     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
+     }
 
-    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
-        ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
-    }
+     override fun onRequestPermissionsResult(
+         requestCode: Int,
+         permissions: Array<out String>,
+         grantResults: IntArray
+     ) {
+         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+         if (requestCode == REQUEST_CODE_PERMISSIONS) {
+             if (allPermissionsGranted()) {
+                 startCamera()
+             } else {
+                 Toast.makeText(this, R.string.permission_denied, Toast.LENGTH_SHORT).show()
+                 finish()
+             }
+         }
+     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (allPermissionsGranted()) {
-                startCamera()
-            } else {
-                Toast.makeText(this, R.string.permission_denied, Toast.LENGTH_SHORT).show()
-                finish()
-            }
-        }
-    }
+     override fun onResume() {
+         super.onResume()
+         adView.resume()
+     }
 
-    override fun onResume() {
-        super.onResume()
-        adView.resume()
-    }
+     override fun onPause() {
+         adView.pause()
+         super.onPause()
+     }
 
-    override fun onPause() {
-        adView.pause()
-        super.onPause()
-    }
+     override fun onDestroy() {
+         super.onDestroy()
+         adView.destroy()
+         cameraExecutor.shutdown()
+         currentGalleryBitmap?.recycle()
+         currentGalleryBitmap = null
+     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        adView.destroy()
-        cameraExecutor.shutdown()
-        currentGalleryBitmap?.recycle()
-        currentGalleryBitmap = null
-    }
-
-    companion object {
-        private const val TAG = "MainActivity"
-        private const val REQUEST_CODE_PERMISSIONS = 10
-        private val REQUIRED_PERMISSIONS = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            arrayOf(Manifest.permission.CAMERA)
-        } else {
-            arrayOf(Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE)
-        }
-        private const val FILENAME_FORMAT = "yyyyMMdd_HHmmss"
-    }
-}
+     companion object {
+         private const val TAG = "MainActivity"
+         private const val REQUEST_CODE_PERMISSIONS = 10
+         private val REQUIRED_PERMISSIONS = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+             arrayOf(Manifest.permission.CAMERA)
+         } else {
+             arrayOf(Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE)
+         }
+         private const val FILENAME_FORMAT = "yyyyMMdd_HHmmss"
+     }
+ }

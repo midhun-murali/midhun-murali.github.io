@@ -13,12 +13,6 @@ enum class Filter(val nameResId: Int, private val matrixValues: FloatArray) {
         0f, 0f, 1f, 0f, 0f,
         0f, 0f, 0f, 1f, 0f
     )),
-    SWEET(R.string.filter_sweet, floatArrayOf(
-        1.2f, 0.1f, 0.1f, 0f, 10f,
-        0.1f, 1.1f, 0f, 0f, 5f,
-        0.1f, 0.1f, 1.0f, 0f, 0f,
-        0f, 0f, 0f, 1f, 0f
-    )),
     PASTEL(R.string.filter_pastel, floatArrayOf(
         0.9f, 0f, 0.1f, 0f, 20f,
         0f, 0.9f, 0.1f, 0f, 20f,
