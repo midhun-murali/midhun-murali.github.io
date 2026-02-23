@@ -68,7 +68,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:padding="8dp"
         android:background="@drawable/top_bar_background"
         android:elevation="4dp"
         app:layout_constraintTop_toTopOf="parent"
@@ -94,7 +94,7 @@
             android:textColor="@color/grey_dark"
             android:textSize="14sp"
             android:layout_gravity="center_vertical"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="12dp"
             android:clickable="true"
             android:focusable="true" />
 
@@ -107,7 +107,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/flash"
             android:padding="4dp"
-            android:layout_marginStart="16dp" />
+            android:layout_marginStart="12dp" />
 
         <!-- Timer Icon with Text (toggle) -->
         <LinearLayout
@@ -116,13 +116,13 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_gravity="center_vertical"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="12dp"
             android:gravity="center"
             android:clickable="true"
             android:focusable="true">
             <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
                 android:src="@drawable/ic_timer"
                 android:contentDescription="@string/timer_3s"
                 android:layout_marginEnd="4dp" />
@@ -144,8 +144,8 @@
         <!-- Camera Switch Icon -->
         <ImageButton
             android:id="@+id/cameraSwitchButton"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:src="@drawable/ic_camera_switch"
             android:background="@drawable/shutter_button_outer"
             android:contentDescription="@string/switch_camera"
@@ -158,8 +158,8 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="@color/white"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
         android:clipToPadding="false"
         app:layout_constraintBottom_toTopOf="@+id/bottomBar"
         app:layout_constraintStart_toStartOf="parent"

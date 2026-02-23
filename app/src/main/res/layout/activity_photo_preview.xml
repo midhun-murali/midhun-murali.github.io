@@ -29,7 +29,6 @@
         android:layout_marginEnd="8dp"
         app:tint="@color/white"
         tools:ignore="MissingConstraints"
-        android:layout_marginTop="16dp"
         android:layout_marginStart="16dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
