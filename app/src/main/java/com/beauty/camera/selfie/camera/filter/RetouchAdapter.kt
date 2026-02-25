@@ -33,14 +33,10 @@ class RetouchAdapter(
         // Try to resolve a thumbnail drawable named `thumb_retouch_<option>` added by the designer.
         // Example: thumb_retouch_crop, thumb_retouch_exposure, thumb_retouch_saturation, etc.
         val drawableBase = opt.name.lowercase()
-        val drawableNamePrimary = "thumb_retouch_$drawableBase"
-        val drawableNameFallback = "thumb_$drawableBase"
+        val drawableNamePrimary = "$drawableBase"
         val ctx = holder.itemView.context
         val pkg = ctx.packageName
         var resId = ctx.resources.getIdentifier(drawableNamePrimary, "drawable", pkg)
-        if (resId == 0) {
-            resId = ctx.resources.getIdentifier(drawableNameFallback, "drawable", pkg)
-        }
         val thumbRes = if (resId != 0) resId else R.drawable.ic_retouch
         holder.thumb.setImageDrawable(ContextCompat.getDrawable(ctx, thumbRes))
 

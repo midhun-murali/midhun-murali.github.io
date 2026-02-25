@@ -43,15 +43,6 @@ class FilterAdapter(
             // If not present, fall back to prefixed ic_filter_* drawable names, and finally to a default.
             val baseName = filter.name.lowercase(Locale.US)
             thumbResId = ctx.resources.getIdentifier(baseName, "drawable", ctx.packageName)
-
-            if (thumbResId == 0) {
-                thumbResId = when (filter) {
-                    Filter.BLOOM -> R.drawable.ic_filter_bloom
-                    Filter.WARM -> R.drawable.ic_filter_warm
-                    Filter.FADE -> R.drawable.ic_filter_fade
-                    else -> R.drawable.ic_filter_bloom
-                }
-            }
             thumbResByFilter[filter] = thumbResId
         }
 
