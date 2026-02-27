@@ -27,6 +27,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Add flavor dimension and product flavors
+    flavorDimensions += "version"
+    productFlavors {
+        create("bubbleSoft") {
+            dimension = "version"
+            applicationIdSuffix = ".bubblesoft"
+        }
+        create("sideRail") {
+            dimension = "version"
+            applicationIdSuffix = ".siderail"
+        }
+    }
+
     signingConfigs {
         if (keystorePropertiesFile.exists()) {
             create("release") {
