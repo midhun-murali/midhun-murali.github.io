@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- BubbleSoft vibrant palette -->
+    <color name="bubble_primary">#00BFFF</color> <!-- DeepSkyBlue -->
+    <color name="bubble_primary_variant">#008FD8</color>
+    <color name="bubble_on_primary">#FFFFFFFF</color>
+
+    <color name="bubble_accent">#FF6EE7B7</color> <!-- mint accent -->
+    <color name="bubble_medium">#FFC8FFF1</color>
+    <color name="bubble_dark">#FF9BE7D6</color>
+
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+    <!-- Map generic theme aliases to BubbleSoft palette -->
+    <color name="theme_accent">@color/bubble_accent</color>
+    <color name="theme_selected">@color/bubble_accent</color>
+    <color name="theme_medium">@color/bubble_medium</color>
+    <color name="theme_panel">@color/bubble_medium</color>
+    <color name="theme_border">@color/bubble_dark</color>
+    <color name="theme_icon">@color/bubble_primary</color>
+</resources>

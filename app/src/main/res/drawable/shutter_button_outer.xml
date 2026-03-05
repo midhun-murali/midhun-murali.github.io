@@ -4,7 +4,7 @@
     <solid android:color="@android:color/transparent" />
     <stroke
         android:width="2dp"
-        android:color="@color/pink_selected" />
+        android:color="@color/theme_selected" />
     <size
         android:width="88dp"
         android:height="88dp" />

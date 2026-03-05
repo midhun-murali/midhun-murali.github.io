@@ -5,7 +5,7 @@
     android:id="@+id/settingsRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/pink_light"
+    android:background="@color/theme_medium"
     tools:context=".SettingsActivity">
 
     <!-- Top bar -->
@@ -16,7 +16,7 @@
         android:orientation="horizontal"
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
-        android:background="@color/pink_accent"
+        android:background="@color/theme_accent"
         android:gravity="center_vertical">
 
         <ImageButton
@@ -55,7 +55,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="CAMERA"
-                android:textColor="@color/pink_icon"
+                android:textColor="@color/theme_icon"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
 
@@ -85,8 +85,8 @@
                         android:id="@+id/switch_replace_original"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:thumbTint="@color/pink_icon"
-                        android:trackTint="@color/pink_panel"
+                        android:thumbTint="@color/theme_icon"
+                        android:trackTint="@color/theme_panel"
                         android:layout_marginEnd="8dp" />
                 </LinearLayout>
 

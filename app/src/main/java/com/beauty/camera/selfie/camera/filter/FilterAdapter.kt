@@ -25,8 +25,10 @@ class FilterAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FilterViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_filter, parent, false)
+        val ctx = parent.context
+        val vertical = ctx.resources.getBoolean(R.bool.filters_vertical)
+        val layoutId = if (vertical) R.layout.item_filter_vertical else R.layout.item_filter
+        val view = LayoutInflater.from(ctx).inflate(layoutId, parent, false)
         return FilterViewHolder(view)
     }
 
@@ -58,7 +60,7 @@ class FilterAdapter(
         holder.filterName.setTextColor(
             ContextCompat.getColor(
                 holder.itemView.context,
-                if (isSelected) R.color.pink_selected else R.color.grey_dark
+                if (isSelected) R.color.theme_selected else R.color.grey_dark
             )
         )
 

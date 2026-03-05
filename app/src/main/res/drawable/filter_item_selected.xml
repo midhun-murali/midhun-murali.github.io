@@ -12,7 +12,7 @@
         <shape android:shape="rectangle">
             <solid android:color="@color/white" />
             <corners android:radius="8dp" />
-            <stroke android:width="3dp" android:color="@color/pink_accent" />
+            <stroke android:width="3dp" android:color="@color/theme_accent" />
         </shape>
     </item>
 </layer-list>

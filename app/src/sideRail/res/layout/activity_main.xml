@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <!-- Top bar: compact with left settings and center title -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="#FF375A7F"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageButton
+            android:id="@+id/settingsButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_settings"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/app_name"
+            android:padding="6dp"
+            app:tint="#FFFFFFFF" />
+
+        <TextView
+            android:id="@+id/hdrButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hdr"
+            android:textColor="#FFFFFFFF"
+            android:textSize="14sp"
+            android:layout_marginStart="12dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <ImageButton
+            android:id="@+id/flashButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_flash"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/flash"
+            android:padding="4dp"
+            android:layout_marginStart="12dp"
+            app:tint="#FFFFFFFF" />
+
+        <LinearLayout
+            android:id="@+id/timerButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginStart="12dp"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true">
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_timer"
+                android:contentDescription="@string/timer_3s"
+                android:layout_marginEnd="4dp"
+                app:tint="#FFFFFFFF" />
+            <TextView
+                android:id="@+id/timerText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/timer_3s"
+                android:textColor="#FFFFFFFF"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/cameraSwitchButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_camera_switch"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/switch_camera"
+            android:padding="8dp"
+            android:layout_marginEnd="8dp"
+            app:tint="#FFFFFFFF" />
+
+    </LinearLayout>
+
+    <!-- Large camera preview fills most of the screen but leaves room for right rail -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#000000"
+        app:layout_constraintTop_toBottomOf="@+id/topBar"
+        app:layout_constraintBottom_toTopOf="@+id/bottomBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/filterCarousel" />
+
+    <!-- Right vertical rail containing filters/retouch as a vertical RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/filterCarousel"
+        android:layout_width="96dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:background="#FFEFF8FF"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:clipToPadding="false"
+        app:layout_constraintTop_toBottomOf="@+id/topBar"
+        app:layout_constraintBottom_toTopOf="@+id/bottomBar"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Bottom bar compact: left gallery, center shutter, right retouch toggles -->
+    <RelativeLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="0dp"
+        android:layout_height="72dp"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="#FF2E4863"
+        android:gravity="center_vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageButton
+            android:id="@+id/galleryButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_gallery"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/gallery"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:padding="6dp"
+            app:tint="#FFFFFFFF" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true">
+
+            <ImageView
+                android:layout_width="55dp"
+                android:layout_height="55dp"
+                android:src="@drawable/shutter_button_outer"
+                android:contentDescription="@string/capture_photo"
+                android:layout_gravity="center" />
+
+            <ImageButton
+                android:id="@+id/captureButton"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/shutter_button_background"
+                android:contentDescription="@string/capture_photo"
+                android:layout_gravity="center"
+                android:elevation="4dp" />
+        </FrameLayout>
+
+    </RelativeLayout>
+
+    <!-- Keep other ids intact for code reuse -->
+    <!-- Gallery overlay (hidden) - placeholder so MainActivity can find this id in all flavors -->
+    <ImageView
+        android:id="@+id/galleryImageOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        android:contentDescription="@string/preview_image"
+        app:layout_constraintTop_toBottomOf="@+id/topBar"
+        app:layout_constraintBottom_toTopOf="@+id/filterCarousel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Hidden controls placeholders used by MainActivity (no visual impact) -->
+    <TextView
+        android:id="@+id/hdrButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:text="HDR"
+        app:layout_constraintTop_toTopOf="@+id/topBar"
+        app:layout_constraintStart_toStartOf="@+id/topBar"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp" />
+
+    <LinearLayout
+        android:id="@+id/timerButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@+id/topBar"
+        app:layout_constraintStart_toEndOf="@+id/hdrButton"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp">
+
+        <TextView
+            android:id="@+id/timerText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3s" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/flashButton"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:visibility="gone"
+        android:src="@drawable/ic_flash"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/flash"
+        app:layout_constraintTop_toTopOf="@+id/topBar"
+        app:layout_constraintStart_toEndOf="@+id/timerButton"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp" />
+
+    <ImageButton
+        android:id="@+id/cameraSwitchButton"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:visibility="gone"
+        android:src="@drawable/ic_camera_switch"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/switch_camera"
+        app:layout_constraintTop_toTopOf="@+id/topBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="12dp" />
+
+    <!-- Placeholder AdView so `R.id.adView` exists for all flavors; hidden by default -->
+    <com.google.android.gms.ads.AdView
+        android:id="@+id/adView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:adSize="BANNER"
+        app:adUnitId="@string/admob_banner_id"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Countdown overlay (hidden) -->
+    <TextView
+        android:id="@+id/countdownOverlay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="72sp"
+        android:textColor="@color/white"
+        android:visibility="gone"
+        android:shadowColor="#80000000"
+        android:shadowDx="0"
+        android:shadowDy="2"
+        android:shadowRadius="6"
+        app:layout_constraintTop_toTopOf="@+id/previewView"
+        app:layout_constraintBottom_toBottomOf="@+id/previewView"
+        app:layout_constraintStart_toStartOf="@+id/previewView"
+        app:layout_constraintEnd_toEndOf="@+id/previewView"
+        android:gravity="center" />
+
+    <ImageButton
+        android:id="@+id/closeGalleryButton"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@drawable/ic_close"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/close"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@+id/topBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="12dp"
+        app:tint="#FFFFFFFF" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+

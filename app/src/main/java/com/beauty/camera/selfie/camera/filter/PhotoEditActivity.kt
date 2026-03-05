@@ -201,7 +201,9 @@ class PhotoEditActivity : AppCompatActivity() {
             Filter.WARM,
             Filter.FADE
         )
-        filterCarousel.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        val vertical = resources.getBoolean(R.bool.filters_vertical)
+        val orientation = if (vertical) LinearLayoutManager.VERTICAL else LinearLayoutManager.HORIZONTAL
+        filterCarousel.layoutManager = LinearLayoutManager(this, orientation, false)
         val adapter = FilterAdapter(filters) { filter ->
             currentFilter = filter
             applyCurrentFilter()
@@ -210,7 +212,9 @@ class PhotoEditActivity : AppCompatActivity() {
     }
 
     private fun showRetouchOptions() {
-        filterCarousel.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        val vertical = resources.getBoolean(R.bool.filters_vertical)
+        val orientation = if (vertical) LinearLayoutManager.VERTICAL else LinearLayoutManager.HORIZONTAL
+        filterCarousel.layoutManager = LinearLayoutManager(this, orientation, false)
         val adapter = RetouchAdapter(retouchItems) { opt ->
             onRetouchOptionSelected(opt)
         }
@@ -474,15 +478,15 @@ class PhotoEditActivity : AppCompatActivity() {
         val seekBar = SeekBar(this).apply { max = 200; progress = initialProgress }
         // Apply pink theme tinting to the SeekBar for progress and thumb
         try {
-            val accent = getColor(R.color.pink_accent)
-            val selected = getColor(R.color.pink_selected)
+            val accent = getColor(R.color.theme_accent)
+            val selected = getColor(R.color.theme_selected)
             val states = arrayOf(intArrayOf(android.R.attr.state_enabled))
             val colors = intArrayOf(accent)
             val csl = android.content.res.ColorStateList(states, colors)
             // progress tint (primary)
             seekBar.progressTintList = csl
             // secondary progress (track behind) use a lighter pink
-            val sec = android.content.res.ColorStateList(states, intArrayOf(getColor(R.color.pink_medium)))
+            val sec = android.content.res.ColorStateList(states, intArrayOf(getColor(R.color.theme_medium)))
             seekBar.progressBackgroundTintList = sec
             // thumb tint
             seekBar.thumbTintList = android.content.res.ColorStateList(states, intArrayOf(selected))
@@ -837,7 +841,7 @@ class PhotoEditActivity : AppCompatActivity() {
     private fun updateModeButtonsUI() {
         if (isEffectsMode) {
             effectsButtonEdit.background = AppCompatResources.getDrawable(this, R.drawable.button_effects_background)
-            effectsTextEdit.setTextColor(getColor(R.color.pink_selected))
+            effectsTextEdit.setTextColor(getColor(R.color.theme_selected))
             effectsTextEdit.textSize = 14f
             effectsTextEdit.typeface = android.graphics.Typeface.create(effectsTextEdit.typeface, android.graphics.Typeface.BOLD)
 
@@ -847,7 +851,7 @@ class PhotoEditActivity : AppCompatActivity() {
             retouchTextEdit.typeface = android.graphics.Typeface.create(retouchTextEdit.typeface, android.graphics.Typeface.NORMAL)
         } else {
             retouchButtonEdit.background = AppCompatResources.getDrawable(this, R.drawable.button_effects_background)
-            retouchTextEdit.setTextColor(getColor(R.color.pink_selected))
+            retouchTextEdit.setTextColor(getColor(R.color.theme_selected))
             retouchTextEdit.textSize = 14f
             retouchTextEdit.typeface = android.graphics.Typeface.create(retouchTextEdit.typeface, android.graphics.Typeface.BOLD)
 

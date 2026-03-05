@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default: horizontal filter carousel (bottom strip) -->
+    <bool name="filters_vertical">false</bool>
+</resources>
+

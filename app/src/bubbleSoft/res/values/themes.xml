@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- BubbleSoft theme overrides -->
+    <style name="Theme.Filterify" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/bubble_primary</item>
+        <item name="colorPrimaryVariant">@color/bubble_primary_variant</item>
+        <item name="colorOnPrimary">@color/bubble_on_primary</item>
+        <item name="colorSecondary">@color/bubble_accent</item>
+        <item name="colorSecondaryVariant">@color/bubble_dark</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="android:statusBarColor">@color/bubble_primary_variant</item>
+        <item name="android:navigationBarColor">@color/bubble_primary</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <!-- Keep splash theme same but with bubble background if needed -->
+    <style name="Theme.Splash" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/bubble_primary</item>
+        <item name="windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>
+

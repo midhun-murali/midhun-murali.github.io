@@ -198,7 +198,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupFilterCarousel() {
-        filterCarousel.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        val vertical = resources.getBoolean(R.bool.filters_vertical)
+        val orientation = if (vertical) LinearLayoutManager.VERTICAL else LinearLayoutManager.HORIZONTAL
+        filterCarousel.layoutManager = LinearLayoutManager(this, orientation, false)
         val adapter = FilterAdapter(filters) { filter ->
             currentFilter = filter
             // If a gallery image is shown apply filter to it, otherwise to the preview
@@ -273,12 +275,12 @@ class MainActivity : AppCompatActivity() {
 
         timerButton.setOnClickListener {
             isTimerEnabled = !isTimerEnabled
-            timerText.setTextColor(if (isTimerEnabled) getColor(R.color.pink_selected) else getColor(R.color.grey_dark))
+            timerText.setTextColor(if (isTimerEnabled) getColor(R.color.theme_selected) else getColor(R.color.grey_dark))
         }
     }
 
     private fun updateHdrUI() {
-        hdrButton.setTextColor(if (isHdrEnabled) getColor(R.color.pink_selected) else getColor(R.color.grey_dark))
+        hdrButton.setTextColor(if (isHdrEnabled) getColor(R.color.theme_selected) else getColor(R.color.grey_dark))
         hdrButton.typeface = android.graphics.Typeface.create(hdrButton.typeface, if (isHdrEnabled) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
     }
 
@@ -309,8 +311,8 @@ class MainActivity : AppCompatActivity() {
     private fun updateFlashButton() {
         try {
             val color = when (flashMode) {
-                ImageCapture.FLASH_MODE_ON -> getColor(R.color.pink_selected)
-                ImageCapture.FLASH_MODE_AUTO -> getColor(R.color.pink_selected)
+                ImageCapture.FLASH_MODE_ON -> getColor(R.color.theme_selected)
+                ImageCapture.FLASH_MODE_AUTO -> getColor(R.color.theme_selected)
                 else -> getColor(R.color.grey_dark)
             }
             flashButton?.imageTintList = ColorStateList.valueOf(color)

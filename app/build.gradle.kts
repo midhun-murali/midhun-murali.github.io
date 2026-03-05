@@ -30,6 +30,9 @@ android {
     // Add flavor dimension and product flavors
     flavorDimensions += "version"
     productFlavors {
+        create("beautyFilter") {
+            dimension = "version"
+        }
         create("bubbleSoft") {
             dimension = "version"
             applicationIdSuffix = ".bubblesoft"

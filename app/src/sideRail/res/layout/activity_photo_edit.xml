@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@color/white">
 
-    <!-- Camera/Image Preview (ImageView for editor) -->
+    <!-- Camera/Image Preview (ImageView for editor) - constrained to left of the right rail -->
     <ImageView
         android:id="@+id/previewView"
         android:layout_width="0dp"
@@ -13,27 +13,9 @@
         android:background="#000000"
         android:scaleType="centerCrop"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/filterCarousel"
+        app:layout_constraintBottom_toTopOf="@+id/adView"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <!-- Countdown overlay (unused in editor but kept for identical UI) -->
-    <TextView
-        android:id="@+id/countdownOverlay"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="72sp"
-        android:textColor="@color/white"
-        android:visibility="gone"
-        android:shadowColor="#80000000"
-        android:shadowDx="0"
-        android:shadowDy="2"
-        android:shadowRadius="6"
-        app:layout_constraintTop_toTopOf="@+id/previewView"
-        app:layout_constraintBottom_toBottomOf="@+id/previewView"
-        app:layout_constraintStart_toStartOf="@+id/previewView"
-        app:layout_constraintEnd_toEndOf="@+id/previewView"
-        android:gravity="center" />
+        app:layout_constraintEnd_toStartOf="@+id/filterCarousel" />
 
     <!-- Gallery image overlay (hidden by default) -->
     <ImageView
@@ -45,7 +27,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/adView"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toStartOf="@+id/filterCarousel" />
 
     <!-- Close button for gallery overlay -->
     <ImageButton
@@ -57,12 +39,12 @@
         android:contentDescription="@string/close"
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/filterCarousel"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="12dp"
         app:tint="@color/white" />
 
-    <!-- Effects/Retouch Buttons Overlay (positioned at top to mimic MainActivity below topBar) -->
+    <!-- Effects/Retouch Buttons Overlay -->
     <LinearLayout
         android:id="@+id/modeButtonsContainer"
         android:layout_width="wrap_content"
@@ -73,7 +55,6 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <!-- Back Button for editor -->
         <ImageButton
             android:id="@+id/btnBackEdit"
             android:layout_width="30dp"
@@ -86,7 +67,6 @@
             android:paddingBottom="6dp"
             app:tint="@color/theme_icon" />
 
-        <!-- Effects Button -->
         <LinearLayout
             android:id="@+id/effectsButton"
             android:layout_width="wrap_content"
@@ -117,7 +97,6 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Retouch Button -->
         <LinearLayout
             android:id="@+id/retouchButton"
             android:layout_width="wrap_content"
@@ -149,17 +128,29 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Filter Carousel -->
+    <!-- Right-side vertical filter rail for SideRail flavor -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/filterCarousel"
-        android:layout_width="0dp"
-        android:layout_height="96dp"
-        android:background="@color/white"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
+        android:layout_width="96dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:background="#FFEFF8FF"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
         android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@+id/previewView"
+        app:layout_constraintTop_toBottomOf="@+id/modeButtonsContainer"
         app:layout_constraintBottom_toTopOf="@+id/adView"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- AdView (banner placed above bottomBar) -->
+    <com.google.android.gms.ads.AdView
+        android:id="@+id/adView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:adSize="BANNER"
+        app:adUnitId="@string/admob_banner_id"
+        app:layout_constraintBottom_toTopOf="@+id/bottomBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -177,21 +168,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Shutter Button Container (we'll reuse captureButton as Save in editor if desired) -->
         <FrameLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true">
 
-            <!-- Outer Ring -->
             <ImageView
                 android:layout_width="66dp"
                 android:layout_height="66dp"
                 android:src="@drawable/shutter_button_outer"
                 android:layout_gravity="center" />
 
-            <!-- Inner Button -->
             <ImageButton
                 android:id="@+id/captureButton"
                 android:layout_width="60dp"
@@ -205,16 +193,5 @@
         </FrameLayout>
     </RelativeLayout>
 
-    <!-- AdView (banner placed above bottomBar) -->
-    <com.google.android.gms.ads.AdView
-        android:id="@+id/adView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        app:adSize="BANNER"
-        app:adUnitId="@string/admob_banner_id"
-        app:layout_constraintBottom_toTopOf="@+id/bottomBar"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>
+

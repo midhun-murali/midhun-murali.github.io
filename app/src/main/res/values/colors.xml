@@ -24,4 +24,12 @@
     <color name="pink_border">#FFEED4E5</color>
     <color name="pink_icon">#FFD25DA2</color>
     <color name="shadow_soft">#1A000000</color>
+
+    <!-- Theme aliases (can be overridden per flavor) -->
+    <color name="theme_accent">@color/pink_accent</color>
+    <color name="theme_selected">@color/pink_selected</color>
+    <color name="theme_medium">@color/pink_medium</color>
+    <color name="theme_panel">@color/pink_panel</color>
+    <color name="theme_border">@color/pink_border</color>
+    <color name="theme_icon">@color/pink_icon</color>
 </resources>

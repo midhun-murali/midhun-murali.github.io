@@ -47,7 +47,7 @@ class RetouchAdapter(
             ContextCompat.getDrawable(holder.itemView.context, R.drawable.filter_item_background)
         }
 
-        holder.label.setTextColor(ContextCompat.getColor(holder.itemView.context, if (isSelected) R.color.pink_selected else R.color.grey_dark))
+        holder.label.setTextColor(ContextCompat.getColor(holder.itemView.context, if (isSelected) R.color.theme_selected else R.color.grey_dark))
         holder.label.textSize = if (isSelected) 16f else 14f
         holder.label.typeface = if (isSelected) {
             android.graphics.Typeface.create(holder.label.typeface, android.graphics.Typeface.BOLD)
