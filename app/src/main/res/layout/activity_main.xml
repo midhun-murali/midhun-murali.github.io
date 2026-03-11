@@ -218,7 +218,7 @@
         </FrameLayout>
     </RelativeLayout>
 
-    <!-- AdView (hidden for now, can be added back if needed) -->
+    <!-- AdView (banner placed above bottomBar) -->
     <com.google.android.gms.ads.AdView
         android:id="@+id/adView"
         android:layout_width="match_parent"
@@ -226,7 +226,7 @@
         android:visibility="gone"
         app:adSize="BANNER"
         app:adUnitId="@string/admob_banner_id"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/bottomBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
