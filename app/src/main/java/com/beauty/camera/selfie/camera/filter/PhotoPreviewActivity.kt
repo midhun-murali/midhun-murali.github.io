@@ -23,6 +23,12 @@ import com.google.android.gms.ads.MobileAds
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
+import android.app.AlertDialog
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.interstitial.InterstitialAd
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.google.android.gms.ads.AdError
+import com.google.android.gms.ads.interstitial.InterstitialAd as InterstitialAdAlias
 
 class PhotoPreviewActivity : AppCompatActivity() {
 
@@ -30,27 +36,31 @@ class PhotoPreviewActivity : AppCompatActivity() {
     private lateinit var btnDelete: ImageButton
     private lateinit var btnSave: ImageButton
     private lateinit var btnShare: ImageButton
+    private lateinit var adView: AdView
 
     private var imageUri: Uri? = null
     private var imageFile: File? = null
+
+    private var interstitialAd: InterstitialAd? = null
+    private var adLoadingDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
         setContentView(R.layout.activity_photo_preview)
 
-        // Initialize mobile ads SDK and load banner if adView exists in layout
+        // Initialize ads and load banner
         MobileAds.initialize(this) {}
-        val adViewId = resources.getIdentifier("adView", "id", packageName)
-        if (adViewId != 0) {
-            val av = findViewById<AdView>(adViewId)
-            val adRequest = AdRequest.Builder().build()
-            av.loadAd(adRequest)
-            av.adListener = object : AdListener() {
-                override fun onAdLoaded() { av.visibility = View.VISIBLE }
-                override fun onAdFailedToLoad(p0: LoadAdError) { av.visibility = View.GONE }
-            }
+        adView = findViewById(R.id.adView)
+        val adRequest = AdRequest.Builder().build()
+        adView.loadAd(adRequest)
+        adView.adListener = object : AdListener() {
+            override fun onAdLoaded() { adView.visibility = View.VISIBLE }
+            override fun onAdFailedToLoad(p0: LoadAdError) { adView.visibility = View.GONE }
         }
+
+        // Load and show a full-screen interstitial for preview activity
+        loadAndShowInterstitial(getString(R.string.admob_photo_preview_interstitial_id))
 
         imageView = findViewById(R.id.previewImage)
         btnDelete = findViewById(R.id.btnDelete)
@@ -202,6 +212,52 @@ class PhotoPreviewActivity : AppCompatActivity() {
         } catch (_: Exception) {
             Toast.makeText(this, R.string.share_failed, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun showAdLoadingDialog() {
+        if (adLoadingDialog?.isShowing == true) return
+        try {
+            val pd = AlertDialog.Builder(this)
+                .setTitle(null)
+                .setMessage(getString(R.string.loading))
+                .setCancelable(false)
+                .create()
+            adLoadingDialog = pd
+            pd.show()
+        } catch (_: Exception) { adLoadingDialog = null }
+    }
+
+    private fun hideAdLoadingDialog() {
+        try { adLoadingDialog?.dismiss() } catch (_: Exception) {}
+        adLoadingDialog = null
+    }
+
+    private fun loadAndShowInterstitial(adUnitId: String) {
+        try {
+            showAdLoadingDialog()
+            val request = AdRequest.Builder().build()
+            InterstitialAd.load(this, adUnitId, request, object : InterstitialAdLoadCallback() {
+                override fun onAdLoaded(ad: InterstitialAd) {
+                    interstitialAd = ad
+                    hideAdLoadingDialog()
+                    try {
+                        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                            override fun onAdDismissedFullScreenContent() { interstitialAd = null }
+                            override fun onAdFailedToShowFullScreenContent(p0: com.google.android.gms.ads.AdError) { interstitialAd = null }
+                        }
+                        ad.show(this@PhotoPreviewActivity)
+                    } catch (_: Exception) {}
+                }
+
+                override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+                    interstitialAd = null
+                    hideAdLoadingDialog()
+                }
+            })
+
+            // safety: ensure loading dialog is removed after 5s
+            window.decorView.postDelayed({ hideAdLoadingDialog() }, 5000)
+        } catch (_: Exception) { hideAdLoadingDialog() }
     }
 
     companion object {

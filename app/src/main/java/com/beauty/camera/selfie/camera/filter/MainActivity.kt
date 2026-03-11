@@ -1,6 +1,7 @@
 package com.beauty.camera.selfie.camera.filter
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -44,8 +45,10 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.camera.core.Camera
 import android.content.res.ColorStateList
 import androidx.exifinterface.media.ExifInterface
+import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
 import java.io.File
 import java.io.FileOutputStream
@@ -121,6 +124,15 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.hide()
         setContentView(R.layout.activity_main)
 
+        // Initialize ads and load banner
+        MobileAds.initialize(this) {}
+        adView = findViewById(R.id.adView)
+        val adRequest = AdRequest.Builder().build()
+        adView.loadAd(adRequest)
+        adView.adListener = object : AdListener() {
+            override fun onAdLoaded() { adView.visibility = View.VISIBLE }
+            override fun onAdFailedToLoad(p0: LoadAdError) { adView.visibility = View.GONE }
+        }
         previewView = findViewById(R.id.previewView)
         topBarLayout = findViewById(R.id.topBar)
         // Capture original padding
@@ -144,7 +156,6 @@ class MainActivity : AppCompatActivity() {
         settingsButton = findViewById(R.id.settingsButton)
         flashButton = findViewById(R.id.flashButton)
         cameraSwitchButton = findViewById(R.id.cameraSwitchButton)
-        adView = findViewById(R.id.adView)
 
         // New overlay views
         galleryImageOverlay = findViewById(R.id.galleryImageOverlay)
@@ -181,9 +192,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        MobileAds.initialize(this) {}
-        adView.loadAd(AdRequest.Builder().build())
-
         outputDirectory = getOutputDirectory()
         cameraExecutor = Executors.newSingleThreadExecutor()
 
@@ -197,6 +205,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("WrongConstant")
     private fun setupFilterCarousel() {
         val vertical = resources.getBoolean(R.bool.filters_vertical)
         val orientation = if (vertical) LinearLayoutManager.VERTICAL else LinearLayoutManager.HORIZONTAL

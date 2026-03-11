@@ -1,5 +1,6 @@
 package com.beauty.camera.selfie.camera.filter
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Bitmap
@@ -35,6 +36,9 @@ import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.interstitial.InterstitialAd
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import java.io.File
 import java.io.FileOutputStream
 import java.io.ByteArrayInputStream
@@ -72,6 +76,10 @@ class PhotoEditActivity : AppCompatActivity() {
     private var sourceImageUri: Uri? = null
     private lateinit var adView: AdView
 
+    // Interstitial ad related
+    private var interstitialAd: InterstitialAd? = null
+    private var adLoadingDialog: AlertDialog? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
@@ -86,6 +94,10 @@ class PhotoEditActivity : AppCompatActivity() {
             override fun onAdLoaded() { adView.visibility = View.VISIBLE }
             override fun onAdFailedToLoad(p0: LoadAdError) { adView.visibility = View.GONE }
         }
+
+        // Load and show a full-screen interstitial for this activity
+        // Show a small loading dialog while the ad is being requested.
+        loadAndShowInterstitial(getString(R.string.admob_photo_edit_interstitial_id))
 
         imageView = findViewById(R.id.previewView)
         filterCarousel = findViewById(R.id.filterCarousel)
@@ -182,11 +194,60 @@ class PhotoEditActivity : AppCompatActivity() {
         btnClose.setOnClickListener { hideGalleryOverlay(); finish() }
     }
 
+    // Create and show a modal loading dialog while an interstitial is being requested
+    private fun showAdLoadingDialog() {
+        if (adLoadingDialog?.isShowing == true) return
+        try {
+            val pd = AlertDialog.Builder(this)
+                .setTitle(null)
+                .setMessage(getString(R.string.loading))
+                .setCancelable(false)
+                .create()
+            adLoadingDialog = pd
+            pd.show()
+        } catch (_: Exception) { adLoadingDialog = null }
+    }
+
+    private fun hideAdLoadingDialog() {
+        try { adLoadingDialog?.dismiss() } catch (_: Exception) {}
+        adLoadingDialog = null
+    }
+
+    private fun loadAndShowInterstitial(adUnitId: String) {
+        try {
+            showAdLoadingDialog()
+            val request = AdRequest.Builder().build()
+            InterstitialAd.load(this, adUnitId, request, object : InterstitialAdLoadCallback() {
+                override fun onAdLoaded(ad: InterstitialAd) {
+                    interstitialAd = ad
+                    hideAdLoadingDialog()
+                    // show immediately if activity still running
+                    try {
+                        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                            override fun onAdDismissedFullScreenContent() { interstitialAd = null }
+                            override fun onAdFailedToShowFullScreenContent(p0: com.google.android.gms.ads.AdError) { interstitialAd = null }
+                        }
+                        ad.show(this@PhotoEditActivity)
+                    } catch (_: Exception) { /* ignore show errors */ }
+                }
+
+                override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+                    interstitialAd = null
+                    hideAdLoadingDialog()
+                }
+            })
+
+            // safety: if ad doesn't load in 5s, hide dialog
+            window.decorView.postDelayed({ hideAdLoadingDialog() }, 5000)
+        } catch (_: Exception) { hideAdLoadingDialog() }
+    }
+
     private fun setupFilters() {
         // initialize carousel initially with filters
         showFilters()
     }
 
+    @SuppressLint("WrongConstant")
     private fun showFilters() {
         val filters = listOf(
             Filter.ORIGINAL,
@@ -211,6 +272,7 @@ class PhotoEditActivity : AppCompatActivity() {
         filterCarousel.adapter = adapter
     }
 
+    @SuppressLint("WrongConstant")
     private fun showRetouchOptions() {
         val vertical = resources.getBoolean(R.bool.filters_vertical)
         val orientation = if (vertical) LinearLayoutManager.VERTICAL else LinearLayoutManager.HORIZONTAL
