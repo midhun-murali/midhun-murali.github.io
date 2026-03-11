@@ -161,7 +161,7 @@
         android:paddingTop="4dp"
         android:paddingBottom="4dp"
         android:clipToPadding="false"
-        app:layout_constraintBottom_toTopOf="@+id/bottomBar"
+        app:layout_constraintBottom_toTopOf="@+id/adView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -218,7 +218,7 @@
         </FrameLayout>
     </RelativeLayout>
 
-    <!-- AdView (banner placed above bottomBar) -->
+    <!-- AdView (banner placed between filterCarousel and bottomBar) -->
     <com.google.android.gms.ads.AdView
         android:id="@+id/adView"
         android:layout_width="match_parent"
