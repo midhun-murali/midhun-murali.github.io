@@ -1,10 +1,10 @@
 <resources>
     <string name="app_name">Beauty Camera</string>
     <string name="admob_app_id">ca-app-pub-2971816084619981~5756529870</string>
-    <string name="admob_banner_id"><!--ca-app-pub-2971816084619981/5831358551</string>--> ca-app-pub-3940256099942544/9214589741</string>
-    <string name="admob_app_open_id"><!--ca-app-pub-2971816084619981/3579090535</string>--> ca-app-pub-3940256099942544/9257395921</string>
-    <string name="admob_photo_edit_interstitial_id"><!--ca-app-pub-2971816084619981/4868121471</string>--> ca-app-pub-3940256099942544/1033173712</string>
-    <string name="admob_photo_preview_interstitial_id"><!--ca-app-pub-2971816084619981/4464651004</string>-->ca-app-pub-3940256099942544/1033173712</string>
+    <string name="admob_banner_id">ca-app-pub-2971816084619981/5831358551</string> <!--ca-app-pub-3940256099942544/9214589741</string>-->
+    <string name="admob_app_open_id">ca-app-pub-2971816084619981/3579090535</string> <!--ca-app-pub-3940256099942544/9257395921</string>-->
+    <string name="admob_photo_edit_interstitial_id">ca-app-pub-2971816084619981/4868121471</string> <!--ca-app-pub-3940256099942544/1033173712</string>-->
+    <string name="admob_photo_preview_interstitial_id">ca-app-pub-2971816084619981/4464651004</string><!--ca-app-pub-3940256099942544/1033173712</string>-->
     <string name="loading">Loading...</string>
     <string name="photo_saved">Photo saved to %1$s</string>
     <string name="take_photo_error">Unable to capture photo</string>
