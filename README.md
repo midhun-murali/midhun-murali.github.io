@@ -1,2 +1,1 @@
-# privacy-policy
-Privacy Policy
+Upload this repository to GitHub Pages. Replace the resume PDF and contact email before publishing.
