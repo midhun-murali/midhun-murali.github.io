@@ -26,7 +26,7 @@ Current applications include:
 
 * 💡 **Easy Flash** – A simple, fast, and beautifully designed flashlight application.
 * 🧮 **Calculator** – A clean, minimal calculator for everyday calculations.
-* 🖼️ **Filter Pro** – A lightweight photo editing app featuring filters, effects, and essential editing tools.
+* 🤳 **Beauty Selfie Camera** – A photo editing app featuring beauty retouching, filters, and essential editing tools.
 
 More applications will be added as they are published on the Google Play Store.
 
